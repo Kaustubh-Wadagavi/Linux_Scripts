@@ -10,15 +10,15 @@ trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
 
 echo $$ > $LOCK_FILE
 
-for sub_dir in `ls -d /usr/local/openspecimen/data/print-labels/*`
+for SUB_DIR in `ls -d /usr/local/openspecimen/data/print-labels/*`
 do
-  for file in `ls -tr $sub_dir/*`        
+  for FILE in `ls -tr $SUB_DIR/*`        
   do
-   sudo scp -i /home/krishagni/Desktop/sftp-scripts/jenkins-private $file jenkins@build.openspecimen.org:/home/jenkins/test
+   sudo scp -i /home/krishagni/Desktop/sftp-scripts/jenkins-private $FILE jenkins@build.openspecimen.org:/home/jenkins/test
     if [ $? -ne 0 ]; then
-      echo "Error Occured"  
+      echo "Failed to copy the file"  
     else
-      echo "success"            
+      echo "File copied successfully"            
     fi
   done
 done
