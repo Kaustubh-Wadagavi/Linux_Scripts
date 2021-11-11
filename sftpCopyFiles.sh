@@ -6,19 +6,19 @@ LOG_FILE=copy.log
 #PASSWORD=
 FILE_COPY_LOCATION=/home/jenkins/test
 
-backupStartTime() {
+copyingStartTime() {
     echo "#########################################################" &>> $LOG_FILE
     echo "Copying Start Time:" `date +%x-%r` &>> $LOG_FILE
 }
 
-backupEndTime() {
+copyingEndTime() {
     echo "Copying End Time:" `date +%x-%r` &>> $LOG_FILE
 }
-backupFailedTime() {
+copyingFailedTime() {
     echo "Copying failed time:" `date +%x-%r` &>> $LOG_FILE
 }
 
-backupStartTime
+copyingStartTime
 
 LOCK_FILE=/tmp/print_lock.txt 
 
@@ -47,10 +47,10 @@ do
 
     if [ $? -ne 0 ]; then
       echo "Copying failed file :" $FILE &>> $LOG_FILE
-      backupFailedTime
+      copyingFailedTime
     else
       echo "Successfully copied file :" $FILE &>> $LOG_FILE
-      backupEndTime
+      copyingEndTime
       #mv $SUB_DIR/ /usr/local/openspecimen/data/copied-print-labels      
     fi
   done
