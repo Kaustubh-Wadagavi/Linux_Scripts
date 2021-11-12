@@ -1,11 +1,11 @@
 #! /bin/bash
 
-HOST=build.openspecimen.org
-USERNAME=jenkins
+HOST=
+USERNAME=
 #PASSWORD=
-TARGET_LOCATION=/home/jenkins/test
-EXISTING_LOCATION=/usr/local/openspecimen/data/print-labels/*
-LOG_FILE=copy.log
+TARGET_LOCATION=
+EXISTING_LOCATION=
+LOG_FILE=
 
 printToLog() {
     echo "$(date +%F-%T)-INFO-${log}"&>> $LOG_FILE
