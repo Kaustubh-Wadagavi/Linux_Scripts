@@ -1,59 +1,73 @@
 #! /bin/bash
 
-HOST=
-USERNAME=
-LOG_FILE=copy.log
+HOST=build.openspecimen.org
+USERNAME=jenkins
 #PASSWORD=
-FILE_COPY_LOCATION=/home/jenkins/test
+TARGET_LOCATION=/home/jenkins/test
+EXISTING_LOCATION=/usr/local/openspecimen/data/print-labels/*
+LOG_FILE=copy.log
 
-copyingStartTime() {
-    echo "#########################################################" &>> $LOG_FILE
-    echo "Copying Start Time:" `date +%x-%r` &>> $LOG_FILE
+printToLog() {
+    echo "$(date +%F-%T)-INFO-${log}"&>> $LOG_FILE
 }
 
-copyingEndTime() {
-    echo "Copying End Time:" `date +%x-%r` &>> $LOG_FILE
-}
-copyingFailedTime() {
-    echo "Copying failed time:" `date +%x-%r` &>> $LOG_FILE
+connectToSftp() {
+      sudo expect -c "
+        spawn sftp -i /home/krishagni/Desktop/sftp-scripts/jenkins-private $USERNAME@$HOST
+        #expect \"password: \"
+        #send \"${PASSWORD}\r\"
+        expect \"sftp>\"
+     "
 }
 
-copyingStartTime
+disConnectSftp() {
+	expect -c "
+	 expect \"sftp>\"
+ 	 send \"bye\r\"
+         expect \"#\"
+     	"
+}
 
 LOCK_FILE=/tmp/print_lock.txt 
+log="locking file ...."
+printToLog
 
 if [ -e $LOCK_FILE ] && kill -0 `cat $LOCK_FILE`; then
   exit                                 
 fi
 
 trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
+log="successfully locked file.."
+printToLog
 
 echo $$ > $LOCK_FILE
 
-for SUB_DIR in `ls -d /usr/local/openspecimen/data/print-labels/*`
-do
-  for FILE in `ls -tr $SUB_DIR/*`        
-  do
-    sudo expect -c "
-    spawn sftp -i /home/krishagni/Desktop/sftp-scripts/jenkins-private $USERNAME@$HOST:$FILE_COPY_LOCATION
-    #expect \"password: \"
-    #send \"${PASSWORD}\r\"
-    expect \"sftp>\"
-    send \"put $SUB_DIR/*\r\"
-    expect \"sftp>\"
-    send \"bye\r\"
-    expect \"#\"
-    " &>> $LOG_FILE
+connectToSftp
 
-    if [ $? -ne 0 ]; then
-      echo "Copying failed file :" $FILE &>> $LOG_FILE
-      copyingFailedTime
-    else
-      echo "Successfully copied file :" $FILE &>> $LOG_FILE
-      copyingEndTime
-      #mv $SUB_DIR/ /usr/local/openspecimen/data/copied-print-labels      
-    fi
+for SUB_DIR in `ls -d $EXISTING_LOCATION`
+do  
+  log="Processing Directory:${SUB_DIR}"
+  printToLog
+    for SUB_DIR_FILE in `ls -tr $SUB_DIR/*`        
+    do
+      log="Processing file: ${SUB_DIR_FILE}"
+      printToLog
+      sudo expect -c "
+      expect \"sftp>\"
+      send \"cd ${TARGET_LOCATION}\r\"
+      expect \"sftp>\"
+      #send \"mkdir ${SUB_DIR##*/}\r\"
+      #expect \"sftp>\"
+      #send \"cd ${SUB_DIR##*/}\r\"
+      #expect \"sftp>\"
+      send \"put ${SUB_DIR_FILE}\r\"
+     "
+     #mv $SUB_DIR/ /usr/local/openspecimen/data/copied-print-labels      
   done
 done
 
+disConnectSftp
+
 rm $LOCK_FILE
+log="Released lock file..."
+printToLog
