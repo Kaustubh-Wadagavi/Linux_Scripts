@@ -1,13 +1,15 @@
 #!/bin/bash
 
-HOST=
-USERNAME=
-PASSWORD=
-EXISTING_LOCATION=
-LOG_FILE=
+HOST=129.106.148.161
+USERNAME=UTSHB
+PASSWORD='Dt6&poEy@zmTh4H2'
+EXISTING_LOCATION="/usr/local/os-test/data/print-labels"
+LOG_FILE=/usr/local/os-test/copy.log
+MOVING_FILES_LOCATION=/usr/local/os-test/data/copied-print-labels
+log=""
 
 printToLog() {
-    echo "$(date +%F-%T)-INFO-${log}"&>> $LOG_FILE 2>&1
+   echo "$(date +%F-%T)-INFO-${log}" >> $LOG_FILE
 }
 
 LOCK_FILE=/tmp/print_lock.txt
@@ -46,11 +48,18 @@ do
     send \"bye\r\"
     expect \"#\"
   "
-  mv $SUB_DIR_FILE /usr/local/os-test/data/copied-print-labels/${SUB_DIR##*/}
+
+  if [ -d $MOVING_FILES_LOCATION/${SUB_DIR##*/} ]
+  then
+      mv $SUB_DIR_FILE $MOVING_FILES_LOCATION/${SUB_DIR##*/}
+  else
+      mkdir $MOVING_FILES_LOCATION/${SUB_DIR##*/}
+      mv $SUB_DIR_FILE $MOVING_FILES_LOCATION/${SUB_DIR##*/}
+  fi
+
   done
 done
 
 rm $LOCK_FILE
 log="Released lock file..."
 printToLog
-
