@@ -1,11 +1,11 @@
 #!/bin/bash
 
-HOST=129.106.148.161
-USERNAME=UTSHB
-PASSWORD='Dt6&poEy@zmTh4H2'
-EXISTING_LOCATION="/usr/local/os-test/data/print-labels"
+HOST=
+USERNAME=
+PASSWORD=
+EXISTING_LOCATION=
 LOG_FILE=/usr/local/os-test/copy.log
-MOVING_FILES_LOCATION=/usr/local/os-test/data/copied-print-labels
+MOVING_FILES_LOCATION=
 log=""
 
 printToLog() {
