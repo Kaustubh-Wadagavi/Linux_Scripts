@@ -4,7 +4,7 @@ HOST=
 USERNAME=
 PASSWORD=
 EXISTING_LOCATION=
-LOG_FILE=/usr/local/os-test/copy.log
+LOG_FILE=
 MOVING_FILES_LOCATION=
 log=""
 
@@ -26,37 +26,60 @@ printToLog
 
 echo $$ > $LOCK_FILE
 
-for SUB_DIR in `ls -d $EXISTING_LOCATION/*`
+for SUB_DIR in $EXISTING_LOCATION/*/
 do
-  log="Processing Directory:${SUB_DIR}"
+  log="Processing directory:${SUB_DIR}"
   printToLog
 
-  for SUB_DIR_FILE in `ls -tr $SUB_DIR/*`
+  SUB_DIR="${SUB_DIR%/}"
+  DIR="${SUB_DIR##*/}"
+
+  log="Picked SUB DIR NAME:${DIR}"
+  printToLog
+
+  if [[ ${DIR} = *" "* ]]; then
+     SUB_DIR=""
+     SUB_DIR=$EXISTING_LOCATION/$DIR/
+     cd "$SUB_DIR"
+     log="Changing existing location:${SUB_DIR}"
+     printToLog
+   else
+     cd "$EXISTING_LOCATION/$DIR"
+     log="Changing Existing Location:$EXISTING_LOCATION/$DIR"
+     printToLog
+  fi
+
+  for FILE in `ls -tr ./*`
   do
-   log="Processing file: ${SUB_DIR_FILE}"
+   log="Picked the file name:${FILE}"
+   printToLog
+   log="Connecting to SFTP..."
    printToLog
 
-    expect -c "
-    spawn sftp UTSHB@129.106.148.161
+   expect -c "
+    spawn sftp $USERNAME@$HOST
     expect \"password: \"
     send \"${PASSWORD}\r\"
     expect \"sftp>\"
-    send \"cd ${SUB_DIR##*/}\r\"
+    send \"cd '${DIR}'\r\"
     expect \"sftp>\"
-    send \"put ${SUB_DIR_FILE}\r\"
+    send \"put ${FILE}\r\"
     expect \"sftp>\"
     send \"bye\r\"
     expect \"#\"
   "
 
-  if [ -d $MOVING_FILES_LOCATION/${SUB_DIR##*/} ]
-  then
-      mv $SUB_DIR_FILE $MOVING_FILES_LOCATION/${SUB_DIR##*/}
-  else
-      mkdir $MOVING_FILES_LOCATION/${SUB_DIR##*/}
-      mv $SUB_DIR_FILE $MOVING_FILES_LOCATION/${SUB_DIR##*/}
+  if [ -d "$MOVING_FILES_LOCATION/${DIR}" ]
+   then
+      mv $FILE "$MOVING_FILES_LOCATION/${DIR}"
+      log="Permenantly Moving the File...$FILE"
+      printToLog
+   else
+      mkdir "$MOVING_FILES_LOCATION/${DIR}"
+      log="Creating the directory:$MOVING_FILES_LOCATION/${DIR}"
+      printToLog
+      mv $FILE "$MOVING_FILES_LOCATION/${DIR}"
   fi
-
   done
 done
 
