@@ -1,88 +1,62 @@
 #!/bin/bash
 
-HOST=
-USERNAME=
-PASSWORD=
-EXISTING_LOCATION=
-LOG_FILE=
-MOVING_FILES_LOCATION=
-log=""
+source /usr/local/openspecimen/sftp-scripts/config.txt
 
-printToLog() {
-   echo "$(date +%F-%T)-INFO-${log}" >> $LOG_FILE
-}
+COUNT=$(find $SOURCE_DIR -type f | wc -l)
 
-LOCK_FILE=/tmp/print_lock.txt
-log="locking file ...."
-printToLog
+if [[ $COUNT -eq 0 ]]
+then
+    exit
+fi
 
 if [ -e $LOCK_FILE ] && kill -0 `cat $LOCK_FILE`; then
   exit
 fi
 
+trap "rm -f $TEMP_FILE" 0 1 15
 trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
-log="successfully locked file.."
-printToLog
-
 echo $$ > $LOCK_FILE
 
-for SUB_DIR in $EXISTING_LOCATION/*/
-do
-  log="Processing directory:${SUB_DIR}"
-  printToLog
-
-  SUB_DIR="${SUB_DIR%/}"
-  DIR="${SUB_DIR##*/}"
-
-  log="Picked SUB DIR NAME:${DIR}"
-  printToLog
-
-  if [[ ${DIR} = *" "* ]]; then
-     SUB_DIR=""
-     SUB_DIR=$EXISTING_LOCATION/$DIR/
-     cd "$SUB_DIR"
-     log="Changing existing location:${SUB_DIR}"
-     printToLog
-   else
-     cd "$EXISTING_LOCATION/$DIR"
-     log="Changing Existing Location:$EXISTING_LOCATION/$DIR"
-     printToLog
-  fi
-
-  for FILE in `ls -tr ./*`
+SUB_DIR= find $SOURCE_DIR* -maxdepth 1 -type d | while read SUB_DIR
+do 
+  REMOTE_DIR=${SUB_DIR/$SOURCE_DIR}
+  FILE= find "${SUB_DIR}"/* -maxdepth 1 -type f | while read FILE
   do
-   log="Picked the file name:${FILE}"
-   printToLog
-   log="Connecting to SFTP..."
-   printToLog
-
-   expect -c "
-    spawn sftp $USERNAME@$HOST
-    expect \"password: \"
-    send \"${PASSWORD}\r\"
-    expect \"sftp>\"
-    send \"cd '${DIR}'\r\"
-    expect \"sftp>\"
-    send \"put ${FILE}\r\"
-    expect \"sftp>\"
-    send \"bye\r\"
-    expect \"#\"
-  "
-
-  if [ -d "$MOVING_FILES_LOCATION/${DIR}" ]
-   then
-      mv $FILE "$MOVING_FILES_LOCATION/${DIR}"
-      log="Permenantly Moving the File...$FILE"
-      printToLog
-   else
-      mkdir "$MOVING_FILES_LOCATION/${DIR}"
-      log="Creating the directory:$MOVING_FILES_LOCATION/${DIR}"
-      printToLog
-      mv $FILE "$MOVING_FILES_LOCATION/${DIR}"
-  fi
+   if [[ ! -d "$FILE" ]]
+   then 
+      echo "put '$FILE' '$REMOTE_DIR'" >> $TEMP_FILE
+   fi
   done
 done
 
-rm $LOCK_FILE
-log="Released lock file..."
-printToLog
+echo "quit" >> $TEMP_FILE   
+
+echo "$(date +%F-%T)-INFO- Synchronizing: Found $COUNT files in local folder to upload."
+
+sudo sftp -i /home/krishagni/jenkins-private -b $TEMP_FILE -v "$USER@$HOST"
+SFTP_EXIT_CODE=$?
+ 
+if [[ $SFTP_EXIT_CODE -eq 0 ]]
+then
+    SUB_DIR= find $SOURCE_DIR* -maxdepth 1 -type d | while read SUB_DIR
+    do
+       DIR=${SUB_DIR/$SOURCE_DIR}
+       if [ -d "$MOVING_FILES_LOCATION/${DIR}" ]
+       then
+	 echo "$SORCE_DIR/${DIR}"
+         mv "$SUB_DIR"/* "$MOVING_FILES_LOCATION/${DIR}"
+       else
+         mkdir -p "$MOVING_FILES_LOCATION/${DIR}"
+         mv "$SUB_DIR"/* "$MOVING_FILES_LOCATION/${DIR}"
+       fi
+    done
+else
+    echo "sftp is failed: Send mail"
+fi
+
+echo "SFTP EXIT CODE IS: $SFTP_EXIT_CODE"
+
+rm -f $TEMP_FILE
+rm -f $LOCK_FILE
+
+exit 0
