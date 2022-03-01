@@ -1,24 +1,19 @@
 #!/bin/bash
 
-USERNAME=                                          # Username to call the REST APIs.
-PASSWORD=                                          # Password of the user.
-JOB_ID=                                            # Id of the JOB.
-URL=                                               # URL to call /rest/ng/scheduled-jobs/$JOB_ID/runs 
-JOB_DETAILS_FILE=                                  # Absolute path to execution details storing .json file 
-RESULT_FILE=                                       # Absolute path to download the file. e.g. /home/scheduled_query_$JOB_ID
+USERNAME=admin                                              # Username to call the REST APIs.
+PASSWORD='Login@123'                                        # Password of the user.
+JOB_ID=23                                                   # Id of the JOB.
+URL="http://localhost:8080/openspecimen/"                   # Host Url.
 
-getJobIdAndStatus(){
- # Calling get method to get the execution details of the Job.	
- curl --user $USERNAME:$PASSWORD --header "Content-Type: application/json" --request GET $URL > $JOB_DETAILS_FILE
+getJobIdAndStatus() {
+ JOB_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -H "Content-Type: application/json" --request GET "$URL/rest/ng/scheduled-jobs/$JOB_ID/runs")
  
- # Getting id of the latest execution id and status
- ID=( $(jq -r '.[0].id' $JOB_DETAILS_FILE) )
- STATUS=($(jq -r '.[0].status' $JOB_DETAILS_FILE))
+ ID=`echo ${JOB_DETAILS} | jq -r '.[0].id'`
+ STATUS=`echo ${JOB_DETAILS} | jq -r '.[0].status'`
  
- # Downloading the file
  if [[ ! -z "$ID" ]] && [[ "$STATUS" = "SUCCEEDED" ]]
  then
-    curl --user $USERNAME:$PASSWORD --header "Content-Type: application/json" --request GET "$URL/$ID/result-file" >> $RESULT_FILE"_$ID".csv 
+    curl -H "X-OS-API-TOKEN: $TOKEN" -H "Content-Type: application/json" --request GET "$URL/$ID/result-file" >> scheduled_query_"$JOB_ID"_"$ID".csv 
     rm $JOB_DETAILS_FILE
     exit 0;
  elif [[ "$STATUS" -eq "IN_PROGRESS" ]]
@@ -29,10 +24,17 @@ getJobIdAndStatus(){
  fi
 }
 
-# Step to execute the job.
-executeJob(){
-    curl --user $USERNAME:$PASSWORD --header "Content-Type: application/json" --request POST --data '{ }' $URL
+executeJob() {
+  curl -H "X-OS-API-TOKEN: $TOKEN" -H "Content-Type: application/json" --request POST --data '{ }' "$URL/rest/ng/scheduled-jobs/$JOB_ID/runs"
 }
 
+getToken() {
+  SESSIONS=$(curl -H "Content-Type: application/json" --request POST --data '{"loginName": "'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"openspecimen"'"}' "$URL/rest/ng/sessions")
+    
+  TOKEN=`echo ${SESSIONS} | jq -r '.token'`
+  echo $TOKEN
+}
+
+getToken
 executeJob
 getJobIdAndStatus
