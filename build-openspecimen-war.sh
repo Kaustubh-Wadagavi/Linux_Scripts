@@ -24,8 +24,8 @@ then
    exit 0;
 fi
 
-git checkout $branch_name
 git pull
+git checkout $branch_name
 
 if [ ! -z $release_name ]
 then
