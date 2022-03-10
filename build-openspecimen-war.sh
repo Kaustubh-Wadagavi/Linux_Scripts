@@ -13,7 +13,9 @@ fi
 
 npm cache clean --force
 
-cd $repo_dir
+cd "$repo_dir"
+
+git pull
 
 exists=`git ls-remote --heads origin $branch_name`
 if [ ! -n "$exists" ]
@@ -22,7 +24,6 @@ then
    exit 0;
 fi
 
-git pull
 git checkout $branch_name
 
 if [ ! -z $release_name ]
@@ -31,13 +32,12 @@ then
     git checkout $release_name
 fi
 
-cd "$repo_dir"
-
 if [ -d "$repo_dir/WEB-INF" ]
 then	
    cd "$repo_dir/www/"
    bower install
    npm install
+   cd "$repo_dir"
 else
    core_app=$(cd ../openspecimen; pwd)
    component="./src/main/"	
