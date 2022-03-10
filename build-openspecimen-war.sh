@@ -3,8 +3,6 @@
 repo_dir=$1
 branch_name=$2
 release_name=$3
-core_app="/mnt/volume_nyc1_01/new_workspace/os_source/openspecimen"
-component="./src/main/"
 
 if [ -z $branch_name ] || [ ! -d $repo_dir ]
 then
@@ -40,10 +38,11 @@ then
    cd "$repo_dir/www/"
    bower install
    npm install
-else 
+else
+   core_app=$(cd ../openspecimen; pwd)
+   component="./src/main/"	
    ln -sf "$core_app/www/bower_components" "$component/webapp/bower_components"
    ln -sf "$core_app/www/node_modules" "$component/webapp/node_modules"
-   ln -sf "$core_app/www/external_components" "$component/webapp/external_components"
    if [ -d "./src/main/ui" ]
    then
      ln -sf "$core_app/ui/node_modules" "$component/ui/node_modules"
