@@ -46,7 +46,7 @@ else
    ln -sf "$core_app/www/external_components" "$component/webapp/external_components"
    if [ -d "./src/main/ui" ]
    then
-     ln -sf "$core_app/ui/node_modules" "$componentui/ui/node_modules"
+     ln -sf "$core_app/ui/node_modules" "$component/ui/node_modules"
    fi
 fi
 
