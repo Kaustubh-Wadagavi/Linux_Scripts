@@ -4,10 +4,10 @@ repo_dir=$1
 branch_name=$2
 release_name=$3
 
-if [ -z $branch_name ] && [ -z $repo_dir ]
+if [ -z $branch_name ] || [ ! -d $repo_dir ]
 then
-   echo "1. If you releasing only master build the please provide repository directory and branch name with command line."
-   echo "2. If you releasing the version the please provide repository directory, branch name and release name with command line."
+   echo "1. If you releasing only master build the please provide only master branch name with command line"
+   echo "2. If you releasing the version the please provide a. branch name b. release name with command line"
    exit 0;
 fi
 
@@ -27,7 +27,7 @@ git checkout $branch_name
 git pull
 
 if [ ! -z $release_name ]
-then 
+then
     git tag -a $release_name -m "OpenSpecimen release $release_name"
     git checkout $release_name
 fi
@@ -40,7 +40,6 @@ gradle clean
 gradle build
 
 if [ ! -z $release_name ]
-then       	
+then
   git push git@github.com:krishagni/openspecimen.git $release_name
 fi
-
