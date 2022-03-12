@@ -11,10 +11,9 @@ then
     exit 0;
 fi
 
-mkdir $base_folder-$datestamp
+mkdir $base_folder-$datestamp $base_folder-$datestamp/plugin_build/
 
 cp -r $os_source/build-tools/* $base_folder-$datestamp
-mkdir $base_folder-$datestamp/plugin_build/
 
 cp $os_source/openspecimen/build/libs/openspecimen.war $base_folder-$datestamp
 rm $workspace/os-extras/build/libs/os-extras.jar
