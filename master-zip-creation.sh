@@ -1,24 +1,27 @@
 #!/bin/bash
 
-workspace=$1
+os_source=$1
 base_folder=$2
+config_file=$3
 datestamp=$(date +%d-%m-%Y)
+
+if [ -z $os_source ] || [ -z $base_folder ] || [ -z $config_file ]
+then
+    echo "Usage: ./master-zip-creation.sh <os_source folder path> <base_folder name> <list of jars>"
+    exit 0;
+fi
 
 mkdir $base_folder-$datestamp
 
-cp -r $workspace/build-tools/* $base_folder-$datestamp
+cp -r $os_source/build-tools/* $base_folder-$datestamp
 mkdir $base_folder-$datestamp/plugin_build/
 
-cp $workspace/openspecimen/build/libs/openspecimen.war $base_folder-$datestamp
-cp $workspace/specimen-array/build/libs/*.jar $base_folder-$datestamp/plugin_build
+cp $os_source/openspecimen/build/libs/openspecimen.war $base_folder-$datestamp
 rm $workspace/os-extras/build/libs/os-extras.jar
-cp $workspace/os-extras/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/specimen-gel/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/dashboard/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/rde/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/sde/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/specimen-catalog/build/libs/*.jar $base_folder-$datestamp/plugin_build
-cp $workspace/distribution-invoicing/build/libs/*.jar $base_folder-$datestamp/plugin_build
+
+while read plugin; do
+   cp $os_source/$plugin/build/libs/*.jar $base_folder-$datestamp/plugin_build
+done <$config_file
 
 #Creating master build zip containing all required files.
 zip -r $base_folder-$datestamp.zip $base_folder-$datestamp
