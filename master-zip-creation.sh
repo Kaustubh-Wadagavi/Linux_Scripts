@@ -27,6 +27,6 @@ while IFS=, read -r plugin plugin_file_name; do
   fi  
 done <$config_file
 
-Creating master build zip containing all required files.
+#Creating master build zip containing all required files.
 zip -r $base_folder-$datestamp.zip $base_folder-$datestamp
 rm -r $base_folder-$datestamp/
