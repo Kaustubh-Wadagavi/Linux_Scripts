@@ -2,7 +2,7 @@
 
 os_source=$1
 base_folder=$2
-config_file=$2
+config_file=$3
 datestamp=$(date +%d-%m-%Y)
 
 if [ -z $os_source ] || [ -z $base_folder ] || [ -z $config_file ]
