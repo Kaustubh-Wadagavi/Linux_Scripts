@@ -4,16 +4,18 @@ repo_dir=$1
 branch_name=$2
 release_name=$3
 
-if [ -z $branch_name ] || [ ! -d $repo_dir ]
+if [ ! -d $repo_dir ] || [ -z $branch_name ] || [ -z $release_name ]
 then
-   echo "1. If you releasing only master build the please provide repo_dir path and branch name. "
-   echo "2. If you releasing the version the please provide a. repo_dir b. branch name and c. release name with command line"
+   echo "Usage: ./build.sh <repository_directory_path> <repository_branch_name> <release_name>"
+   echo "Please specify absolute respository directory path, branch name and tag name."
    exit 0;
 fi
 
 npm cache clean --force
 
 cd "$repo_dir"
+
+repository_url=git config --get remote.origin.url
 
 git pull
 
@@ -26,7 +28,7 @@ fi
 
 git checkout $branch_name
 
-if [ ! -z $release_name ]
+if [ ! -z $release_name ] && [ $release_name -ne "master" ]
 then
     git tag -a $release_name -m "OpenSpecimen release $release_name"
     git checkout $release_name
@@ -52,7 +54,7 @@ fi
 gradle clean
 gradle build
 
-if [ ! -z $release_name ]
+if [ ! -z $release_name ] && [ $release_name -ne "master" ]
 then
-  git push git@github.com:krishagni/openspecimen.git $release_name
+  git push $repository_url $release_name
 fi
