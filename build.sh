@@ -15,8 +15,8 @@ npm cache clean --force
 
 cd "$repo_dir"
 
-repository_url=git config --get remote.origin.url
-
+repository_url=$(git config --get remote.origin.url)
+echo "$repository_url"
 git pull
 
 exists=`git ls-remote --heads origin $branch_name`
@@ -28,7 +28,7 @@ fi
 
 git checkout $branch_name
 
-if [ ! -z $release_name ] && [ $release_name -ne "master" ]
+if [ ! -z $release_name ] && [ $release_name != "master" ]
 then
     git tag -a $release_name -m "OpenSpecimen release $release_name"
     git checkout $release_name
@@ -54,7 +54,7 @@ fi
 gradle clean
 gradle build
 
-if [ ! -z $release_name ] && [ $release_name -ne "master" ]
+if [ ! -z $release_name ] && [ $release_name != "master" ]
 then
   git push $repository_url $release_name
 fi
