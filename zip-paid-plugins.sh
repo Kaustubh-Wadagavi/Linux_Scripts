@@ -14,7 +14,7 @@ while IFS=, read -r plugin plugin_file_name; do
   if [ -f "$os_source/$plugin/build/libs/$plugin_file_name-$release_name.jar" ]
   then
     cp $os_source/$plugin/build/libs/$plugin_file_name-$release_name.jar .
-    zip -r os-$plugin-$release_name.zip $plugin_file_name-$release_name.jar
+    zip -r $plugin_file_name-$release_name $plugin_file_name-$release_name.jar
     rm $plugin_file_name-$release_name.jar
     cp os-$plugin-$release_name.zip /usr/local/jenkins/openspecimen-plugins
   else
