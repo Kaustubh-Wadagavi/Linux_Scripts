@@ -10,12 +10,7 @@ IMPORT_TYPE=CREATE
 DATE_FORMAT=mm-dd-yyyy
 TIME_FORMAT=HH:mm:ss
 
-if [ ! -f $FILE ]; then
-   echo "Usage ./upload_cps.sh <fileName>.csv" 
-fi
-
 checkJobStatusAndDownloadReport(){
-
    RUNNING_JOB_STATUS=$(curl -u $USERNAME:$PASSWORD -X GET "$URL/import-jobs/$JOB_ID")
    JOB_STATUS=$(echo $RUNNING_JOB_STATUS | grep -o '"status":"[^"]*' | grep -o '[^"]*$')
 
@@ -33,8 +28,7 @@ checkJobStatusAndDownloadReport(){
 
 }
 
-createAndRunTheImportJob(){
-   
+createAndRunTheImportJob(){   
    IMPORT_JOB_DETAILS=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"objectType":"'"$OBJECT_TYPE"'","importType":"'"$IMPORT_TYPE"'","inputFileId":"'"$FILE_ID"'","dateFormat":"'"$DATE_FORMAT"'","timeFormat":"'"$TIME_FORMAT"'"}' "$URL/import-jobs")
    
    IMPORT_JOB_ID=$(echo $IMPORT_JOB_DETAILS | tr , '\n' | grep id | awk -F ':' '{print $2}')
@@ -46,7 +40,11 @@ getFileId(){
     FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
 }
 
-
-getFileId
-createAndRunTheImportJob
-checkJobStatusAndDownloadReport
+if [ -f "$FILE" ]; then
+   getFileId
+   createAndRunTheImportJob
+   checkJobStatusAndDownloadReport
+else
+   echo "Usage ./upload_cps.sh <fileName>.csv"
+   exit 0;
+fi
