@@ -1,18 +1,23 @@
 #!/bin/bash
 
 FILE=$1
-USERNAME="kaustubh"
+USERNAME=admin
 PASSWORD="Login@123"
 DOMAIN_NAME="openspecimen"
-URL="https://test.openspecimen.org/rest/ng"
+URL="http://localhost:8080/openspecimen/rest/ng"
 OBJECT_TYPE=cp
 IMPORT_TYPE=CREATE
 DATE_FORMAT=mm-dd-yyyy
 TIME_FORMAT=HH:mm:ss
 
 checkJobStatusAndDownloadReport(){
-   RUNNING_JOB_STATUS=$(curl -u $USERNAME:$PASSWORD -X GET "$URL/import-jobs/$JOB_ID")
-   JOB_STATUS=$(echo $RUNNING_JOB_STATUS | grep -o '"status":"[^"]*' | grep -o '[^"]*$')
+   if [ ! -z $TOKEN ] || [ ! -z $JOB_ID ];then
+      RUNNING_JOB_STATUS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/import-jobs/$JOB_ID")
+      JOB_STATUS=$(echo $RUNNING_JOB_STATUS | grep -o '"status":"[^"]*' | grep -o '[^"]*$')
+   else
+      echo "JOB is not created. Please check what's went wrong."
+      exit 0;
+   fi
 
    if [ "$JOB_STATUS" = "FAILED" ];then
       echo "The Import Job is failed. Downloaded the resport to: failed_report_$JOB_ID.csv"
@@ -25,26 +30,43 @@ checkJobStatusAndDownloadReport(){
        sleep 5
        checkJobStatusAndDownloadReport   
    fi
-
 }
 
 createAndRunTheImportJob(){   
-   IMPORT_JOB_DETAILS=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"objectType":"'"$OBJECT_TYPE"'","importType":"'"$IMPORT_TYPE"'","inputFileId":"'"$FILE_ID"'","dateFormat":"'"$DATE_FORMAT"'","timeFormat":"'"$TIME_FORMAT"'"}' "$URL/import-jobs")
-   
-   IMPORT_JOB_ID=$(echo $IMPORT_JOB_DETAILS | tr , '\n' | grep id | awk -F ':' '{print $2}')
-   JOB_ID=$(echo $IMPORT_JOB_ID | tr -d -c 0-9)
+    if [ ! -z $TOKEN ] || [ ! -z $FILE_ID ] ; then	
+       IMPORT_JOB_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X POST -H "Content-Type: application/json" -d '{"objectType":"'"$OBJECT_TYPE"'","importType":"'"$IMPORT_TYPE"'","inputFileId":"'"$FILE_ID"'","dateFormat":"'"$DATE_FORMAT"'","timeFormat":"'"$TIME_FORMAT"'"}' "$URL/import-jobs")
+       IMPORT_JOB_ID=$(echo $IMPORT_JOB_DETAILS | tr , '\n' | grep id | awk -F ':' '{print $2}')
+       JOB_ID=$(echo $IMPORT_JOB_ID | tr -d -c 0-9)
+   else
+       echo "The Input file is not accepted by Server. Please send CSV file."
+       exit 0;
+   fi
 }
 
 getFileId(){
-    FILE_ID_DETAILS=$(curl -u $USERNAME:$PASSWORD -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
-    FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
+    if [ ! -z $TOKEN ]; then
+       FILE_ID_DETAILS=$(curl -X POST -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
+       FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
+    else 
+       echo "Authentication is not done. Please enter correct username and password."
+       exit 0;
+    fi
 }
 
-if [ -f "$FILE" ]; then
+startSessions(){
+    API_TOKEN=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"loginName":"'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"$DOMAIN_NAME"'"}' "$URL/sessions")
+    TOKEN=$(echo $API_TOKEN | grep -o '"token":"[^"]*' | grep -o '[^"]*$')
+    
+}
+
+if [[ $FILE == *.csv ]] 
+then
+   startSessions
    getFileId
    createAndRunTheImportJob
    checkJobStatusAndDownloadReport
 else
    echo "Usage ./upload_cps.sh <fileName>.csv"
+   echo "Please give input CSV file only."
    exit 0;
 fi
