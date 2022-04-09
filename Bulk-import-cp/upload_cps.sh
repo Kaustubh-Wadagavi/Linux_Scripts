@@ -20,15 +20,15 @@ checkJobStatusAndDownloadReport(){
    fi
 
    if [ "$JOB_STATUS" = "FAILED" ];then
+      curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/import-jobs/$JOB_ID/output" >> failed_report_$JOB_ID.csv
       echo "The Import Job is failed. Downloaded the resport to: failed_report_$JOB_ID.csv"
-      curl -u $USERNAME:$PASSWORD -X GET "$URL/import-jobs/$JOB_ID/output" >> failed_report_$JOB_ID.csv
    elif [ "$JOB_STATUS" = "COMPLETED" ];then
+      curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/import-jobs/$JOB_ID/output" >> success_report_$JOB_ID.csv
       echo "The import job is successfully completed saved in: success_report_$JOB_ID.csv"
-      curl -u $USERNAME:$PASSWORD -X GET "$URL/import-jobs/$JOB_ID/output" >> success_report_$JOB_ID.csv
    elif [ "$JOB_STATUS" = "IN_PROGRESS" ];then
-       echo "The import job is running. Please wait....."
-       sleep 5
-       checkJobStatusAndDownloadReport
+      echo "The import job is running. Please wait....."
+      sleep 5
+      checkJobStatusAndDownloadReport
    fi
 
 }
@@ -48,12 +48,13 @@ createAndRunTheImportJob(){
 
 getFileId(){
    if [ ! -z $TOKEN ]; then
-      FILE_ID_DETAILS=$(curl -X POST -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
+      FILE_ID_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
       FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
    else 
       echo "Authentication is not done. Please enter correct username and password."
       exit 0;
    fi
+
 }
 
 startSessions(){
