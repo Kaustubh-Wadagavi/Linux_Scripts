@@ -25,37 +25,40 @@ checkJobStatusAndDownloadReport(){
    elif [ "$JOB_STATUS" = "COMPLETED" ];then
       echo "The import job is successfully completed saved in: success_report_$JOB_ID.csv"
       curl -u $USERNAME:$PASSWORD -X GET "$URL/import-jobs/$JOB_ID/output" >> success_report_$JOB_ID.csv
-   else
+   elif [ "$JOB_STATUS" = "IN_PROGRESS" ];then
        echo "The import job is running. Please wait....."
        sleep 5
-       checkJobStatusAndDownloadReport   
+       checkJobStatusAndDownloadReport
    fi
+
 }
 
 createAndRunTheImportJob(){   
-    if [ ! -z $TOKEN ] || [ ! -z $FILE_ID ] ; then	
-       IMPORT_JOB_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X POST -H "Content-Type: application/json" -d '{"objectType":"'"$OBJECT_TYPE"'","importType":"'"$IMPORT_TYPE"'","inputFileId":"'"$FILE_ID"'","dateFormat":"'"$DATE_FORMAT"'","timeFormat":"'"$TIME_FORMAT"'"}' "$URL/import-jobs")
-       IMPORT_JOB_ID=$(echo $IMPORT_JOB_DETAILS | tr , '\n' | grep id | awk -F ':' '{print $2}')
-       JOB_ID=$(echo $IMPORT_JOB_ID | tr -d -c 0-9)
+   if [ ! -z $TOKEN ] || [ ! -z $FILE_ID ] ; then	
+      IMPORT_JOB_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X POST -H "Content-Type: application/json" -d '{"objectType":"'"$OBJECT_TYPE"'","importType":"'"$IMPORT_TYPE"'","inputFileId":"'"$FILE_ID"'","dateFormat":"'"$DATE_FORMAT"'","timeFormat":"'"$TIME_FORMAT"'"}' "$URL/import-jobs")
+      IMPORT_JOB_ID=$(echo $IMPORT_JOB_DETAILS | tr , '\n' | grep id | awk -F ':' '{print $2}')
+      JOB_ID=$(echo $IMPORT_JOB_ID | tr -d -c 0-9)
+      echo $JOB_ID
    else
-       echo "The Input file is not accepted by Server. Please send CSV file."
-       exit 0;
+      echo "The Input file is not accepted by Server. Please send CSV file."
+      exit 0;
    fi
+
 }
 
 getFileId(){
-    if [ ! -z $TOKEN ]; then
-       FILE_ID_DETAILS=$(curl -X POST -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
-       FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
-    else 
-       echo "Authentication is not done. Please enter correct username and password."
-       exit 0;
-    fi
+   if [ ! -z $TOKEN ]; then
+      FILE_ID_DETAILS=$(curl -X POST -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/import-jobs/input-file")
+      FILE_ID=$(echo $FILE_ID_DETAILS | grep -o '"fileId":"[^"]*' | grep -o '[^"]*$')
+   else 
+      echo "Authentication is not done. Please enter correct username and password."
+      exit 0;
+   fi
 }
 
 startSessions(){
-    API_TOKEN=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"loginName":"'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"$DOMAIN_NAME"'"}' "$URL/sessions")
-    TOKEN=$(echo $API_TOKEN | grep -o '"token":"[^"]*' | grep -o '[^"]*$')
+   API_TOKEN=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"loginName":"'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"$DOMAIN_NAME"'"}' "$URL/sessions")
+   TOKEN=$(echo $API_TOKEN | grep -o '"token":"[^"]*' | grep -o '[^"]*$')
     
 }
 
