@@ -9,7 +9,7 @@ DUMP_FILE=/usr/local/openspecimen/heapDump.bin
 PASSWORD='Krish!@3agni'
 
 invokeApi() {
-  wget -t 10 -T 60 --no-check-certificate $URL/rest/ng/config-settings/app-props
+  wget -T 60 --no-check-certificate $URL/rest/ng/config-settings/app-props
   STATUS=$?
   if [ $STATUS -eq 0 ]
   then
@@ -22,7 +22,6 @@ loadConfigProperties() {
   if [ $COUNT -gt $RETRY_COUNT ]
   then
     PID=$(ps -ef | grep $SERVICE_NAME | grep -v grep | awk '{print $2}')
-    $(jcmd $PID GC.heap_dump $DUMP_FILE)
     echo $PASSWORD | sudo -S systemctl start $SERVICE_NAME
     #sendEmail
   fi
