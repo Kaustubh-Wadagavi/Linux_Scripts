@@ -1,11 +1,10 @@
 #!/bin/bash
 
 URL=$1
-now="$(date)"
 COUNT=1
 RETRY_COUNT=2
 SERVICE_NAME=openspecimen
-DUMP_FILE=/usr/local/openspecimen/heapDump.bin
+#DUMP_FILE=/usr/local/openspecimen/heapDump.hprof
 PASSWORD='Krish!@3agni'
 
 invokeApi() {
@@ -21,7 +20,6 @@ invokeApi() {
 loadConfigProperties() {
   if [ $COUNT -gt $RETRY_COUNT ]
   then
-    PID=$(ps -ef | grep $SERVICE_NAME | grep -v grep | awk '{print $2}')
     echo $PASSWORD | sudo -S systemctl start $SERVICE_NAME
     #sendEmail
   fi
