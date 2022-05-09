@@ -1,8 +1,8 @@
 #!/bin/bash
 
-URL=$1
+URL=http://localhost:8080/openspecimen
 COUNT=1
-RETRY_COUNT=2
+RETRY_COUNT=10
 SERVICE_NAME=openspecimen
 #DUMP_FILE=/usr/local/openspecimen/heapDump.hprof
 PASSWORD='Krish!@3agni'
