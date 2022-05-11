@@ -2,9 +2,8 @@
 
 URL=http://localhost:8080/openspecimen
 COUNT=1
-RETRY_COUNT=10
+RETRY_COUNT=5
 SERVICE_NAME=openspecimen
-#DUMP_FILE=/usr/local/openspecimen/heapDump.hprof
 PASSWORD='Krish!@3agni'
 
 invokeApi() {
@@ -20,8 +19,16 @@ invokeApi() {
 loadConfigProperties() {
   if [ $COUNT -gt $RETRY_COUNT ]
   then
-    echo $PASSWORD | sudo -S systemctl start $SERVICE_NAME
-    #sendEmail
+    CHECK_SERVICE_RUNNING_STATUS=$(ps -ef | grep -v grep | grep $SERVICE_NAME | wc -l)
+    if [ $CHECK_SERVICE_RUNNING_STATUS -gt 0 ]
+    then 
+	echo $PASSWORD | sudo -S systemctl restart $SERVICE_NAME
+	sleep 120
+    elif [ $CHECK_SERVICE_RUNNING_STATUS -eq 0 ]
+    then
+	echo "Someone stopped the OpenSpecimen for maintainance...."
+	exit 0
+    fi
   fi
   invokeApi
   sleep 10
@@ -29,12 +36,5 @@ loadConfigProperties() {
   echo $COUNT
   loadConfigProperties
 }
-
-if [[ -z $URL ]]
-then
-    echo "USAGE: ./startOpenSpecimen.sh <URL>"
-    echo "Please send a URL in command line"
-    exit 0
-fi
 
 loadConfigProperties
