@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL=https://build.openspecimen.org/openspecimen
+URL=http://localhost:8080/openspecimen
 TOMCAT_HOME=/usr/local/openspecimen/tomcat-as
 SERVICE_NAME=openspecimen
 PASSWORD='Krish!@3agni'
@@ -36,7 +36,7 @@ restartServer() {
 
 }
 
-takeHeapDumpAndKill() {
+takeHeapDumpAndKillPid() {
   PROCESS_ID=$(ps -ef | grep $SERVICE_NAME | grep -v grep | awk '{print $2}')
   if (( $(ps -ef | grep -v grep | grep $SERVICE_NAME | wc -l) > 0 ))
   then
@@ -84,7 +84,7 @@ main() {
   PID_EXISTS=$?
   if [ $PID_EXISTS -eq 0 ]
   then
-    takeHeapDumpAndKill
+    takeHeapDumpAndKillPid
   else
     echo "Someone Stopped OpenSpecimen...!"
     exit 0;
