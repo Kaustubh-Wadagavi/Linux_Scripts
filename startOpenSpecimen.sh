@@ -1,14 +1,14 @@
 #!/bin/bash
 
-URL=http://localhost:8080/openspecimen
+URL=
 TOMCAT_HOME=/usr/local/openspecimen/tomcat-as
 SERVICE_NAME=openspecimen
 PASSWORD='Krish!@3agni'
-EMAIL_ID='do-not-reply@krishagni.com'
-EMAIL_PASS='fmhrtiydtzqnfyke'
+EMAIL_ID=
+EMAIL_PASS=
 CURRENT_TIME=$(date "+%Y.%m.%d-%H.%M.%S")
 EMAIL_FILE=$CURRENT_TIME.txt
-RCPT_EMAIL_ID='build@krishagni.com'
+RCPT_EMAIL_ID=
 CLIENT_NAME_AND_ENVIRONMENT="Kaustubh Local Instance"
 HEAP_DUMP_FILE=$CURRENT_TIME.hprof
 
@@ -26,7 +26,6 @@ Hello Build Team,
 Regards,
 Auto-Restart-Bot
 EOF
-
   curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u $EMAIL_ID:$EMAIL_PASS --mail-from $EMAIL_ID --mail-rcpt $RCPT_EMAIL_ID --upload-file $EMAIL_FILE
 
 }
@@ -36,8 +35,8 @@ restartServer() {
 
 }
 
-takeHeapDumpAndKillPid() {
-  PROCESS_ID=$(ps -ef | grep $SERVICE_NAME | grep -v grep | awk '{print $2}')
+takeHeapDumpAndKill() {
+  PROCESS_ID=$(cat $TOMCAT_HOME/bin/pid.txt)
   if (( $(ps -ef | grep -v grep | grep $SERVICE_NAME | wc -l) > 0 ))
   then
       jmap -dump:live,format=b,file=$HEAP_DUMP_FILE $PROCESS_ID
@@ -84,7 +83,7 @@ main() {
   PID_EXISTS=$?
   if [ $PID_EXISTS -eq 0 ]
   then
-    takeHeapDumpAndKillPid
+    takeHeapDumpAndKill
   else
     echo "Someone Stopped OpenSpecimen...!"
     exit 0;
