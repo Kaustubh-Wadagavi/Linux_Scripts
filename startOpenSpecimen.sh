@@ -3,14 +3,13 @@
 URL=
 TOMCAT_HOME=
 OS_DATA=
-SERVICE_USER=
 SERVICE_NAME=
 EMAIL_ID=
 EMAIL_PASS=
-CURRENT_TIME=$(date "+%Y.%m.%d-%H.%M.%S")
-EMAIL_FILE=$CURRENT_TIME.txt
+CURRENT_TIME=
+EMAIL_FILE=
 RCPT_EMAIL_ID=
-CLIENT_NAME_AND_ENVIRONMENT="Kaustubh Local Instance"
+CLIENT_NAME_AND_ENVIRONMENT=
 HEAP_DUMP_FILE=$TOMCAT_HOME/bin/$CURRENT_TIME.hprof
 
 
@@ -58,7 +57,7 @@ invokeApi() {
 }
 
 main() {
-  for ((COUNT=0; $COUNT <= 1; COUNT++))
+  for ((COUNT=0; $COUNT <= 10; COUNT++))
   do
    invokeApi
     STATUS=$?
@@ -87,6 +86,7 @@ main() {
   fi
   
   sendMail
+  rm -r logs.zip
   exit 0;
 
 }
