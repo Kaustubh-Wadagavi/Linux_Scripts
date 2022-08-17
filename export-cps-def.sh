@@ -1,44 +1,54 @@
 #/bin/bash
 
-URL=http://localhost:8080/openspecimen/rest/ng
-USERNAME=admin
-PASSWORD=Test@123
-FILE=cp_details.txt
+URL=$1
+USERNAME=$2
+PASSWORD=$3
 
 exportCpDef() {
-   for CP_ID in "${arr[@]}"
-   do
-     CP_DEF=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/collection-protocols/$CP_ID/definition")
-     echo $CP_DEF > cpDef_$CP_ID.json
-     CP_DEF=null;
-   done
+  for CP_ID in "${arr[@]}"
+  do
+    CP_DEF=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/rest/ng/collection-protocols/$CP_ID/definition")
+    echo $CP_DEF > cpDef_$CP_ID.json
+  done
 
 }
 
 getAllCps() {
-   if [ ! -z $TOKEN ]; then
-      CP_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/collection-protocols")
-      echo $CP_DETAILS > $FILE 
-      arr=( $(jq -r '.[].id' $FILE) )
-      printf '%s\n' "${arr[@]}"
-   else 
-      echo "Authentication is not done. Please enter correct username and password."
-      exit 0;
-   fi
+  CP_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/rest/ng/collection-protocols")
+  arr=( $(echo $CP_DETAILS | jq -r '.[].id') )
 
 }
 
 authenticate() {
-API_TOKEN=$(curl -u $USERNAME:$PASSWORD -X POST -H "Content-Type: application/json" -d '{"loginName":"'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"$DOMAIN_NAME"'"}' "$URL/sessions")
-   TOKEN=$(echo $API_TOKEN | grep -o '"token":"[^"]*' | grep -o '[^"]*$')
+  API_TOKEN=$(curl -X POST -H "Content-Type: application/json" -d '{"loginName":"'"$USERNAME"'","password":"'"$PASSWORD"'","domainName":"'"$DOMAIN_NAME"'"}' "$URL/rest/ng/sessions")
+  TOKEN=$(echo $API_TOKEN | jq '.token' | sed -e 's/^"//' -e 's/"$//')
+
+  if [ ! -z $TOKEN ]; then
+     return 0;
+  else
+     return 1;
+  fi
 
 }
 
 main() {
-  authenticate
-  getAllCps
+  if [ ! -z $URL ] && [ ! -z $USERNAME ] && [ ! -z $PASSWORD ]; then
+     authenticate
+  else
+     echo "USAGE ./export-cps-def.sh <URL> <USERNAME> <PASSWORD>"
+     echo "Please enter URL, User Name, and Password while running the script"
+     exit 1;
+  fi
+  
+  EXIT_STATUS=$?
+  if [ $EXIT_STATUS == 0 ]; then
+    getAllCps
+  else
+   echo "Please enter valid credentials for $URL"
+   exit 1;
+  fi
+
   exportCpDef
-  rm $FILE
 
 }
 
