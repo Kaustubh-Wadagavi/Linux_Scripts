@@ -1,10 +1,10 @@
 #!/bin/bash
 
-USERNAME="kaustubh@krishagni.com"
-PASSWORD="Login@123"
-URL="https://demo.openspecimen.org/"
-FROM_DATE=2022-12-12
-TO_DATE=2022-12-15
+USERNAME=
+PASSWORD=
+URL=
+FROM_DATE=
+TO_DATE=
 
 export() {
 
