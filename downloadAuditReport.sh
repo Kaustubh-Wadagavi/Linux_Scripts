@@ -20,7 +20,7 @@ getAuditFile() {
 exportAudit() {
    fileId=$(curl -H "X-OS-API-TOKEN: $apiToken" -H "Content-Type: application/json" -X POST -d '{"includeModifiedProps": "'"true"'","startDate":"'"$startDate"'","endDate":"'"$endDate"'","reportTypes":["'"data"'","'"query_exim"'","'"api_calls"'","'"auth"'"]}' "$url/rest/ng/audit//export-revisions")
    file=`echo ${fileId} | jq -r '.fileId'`
-   echo $file
+
 }
 
 getToken() {
