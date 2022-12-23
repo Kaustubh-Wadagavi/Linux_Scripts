@@ -11,7 +11,7 @@ loginName=                                                                      
 password=                                                                       #OpenSpecimen Password
 url=                                                                            #OpenSpecimen URL
 
-getCustomerId() {
+updateCustomer() {
   c=0
   readarray -t customers < <(awk -F "," '{print $4}' $allIssues | awk 'NR!=1 {print}' | sort -u)
   customersCount=${#customers[@]}
@@ -89,4 +89,4 @@ getIssues
 saveAllIssues
 sortClients
 getToken
-getCustomerId
+updateCustomer
