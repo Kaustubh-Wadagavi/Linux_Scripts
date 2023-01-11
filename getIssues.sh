@@ -1,19 +1,10 @@
 #!/bin/bash
 
-userName=                                                                       #Jira Username
-token=                                                                          #Jira Token to call APIs
-url=                                                                            #Jira URL
-currentTime=$(date "+%Y_%m_%d_%H%M%S")
-allIssues=jira-support-issues-$currentTime.csv
-issuesJson=issues-$currentTime.json
-outputDir=output
-loginName=                                                                      #OpenSpecimen Login Name
-password=                                                                       #OpenSpecimen Password
-url=                                                                            #OpenSpecimen URL
+configFile=$1
 
-updateCustomer() {
+getCustomerId() {
   c=0
-  readarray -t customers < <(awk -F "," '{print $4}' $allIssues | awk 'NR!=1 {print}' | sort -u)
+  readarray -t customers < <(awk -F "," '{print $5}' $allIssues | awk 'NR!=1 {print}' | sort -u)
   customersCount=${#customers[@]}
 
   while [ $c -lt $customersCount ]
@@ -42,10 +33,13 @@ getToken() {
 
 
 sortClients() {
+  sed -e s/deletethis//g -i $allIssuesCsv
+  echo sorting clients
   i=0
-  if [ -d "$outputDir" ]; then rm -Rf $outputDir; fi
-  mkdir output
-  readarray -t uniqueInstitutes < <(awk -F "," '{print $4}' $allIssues | awk 'NR!=1 {print}' | sort -u)
+  echo $i
+  if [ -d "$outputDir" ]; then $(rm -Rf $outputDir); fi
+  mkdir $outputDir
+  readarray -t uniqueInstitutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
   len=${#uniqueInstitutes[@]}
   
   while [ $i -lt $len ];
@@ -55,38 +49,68 @@ sortClients() {
     createFileName=$(echo $security | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
     file=$createFileName-$(date "+%Y-%m-%d").csv
     resultFile=$outputDir/$file
-    csvgrep -c 4 -m "${security}" "${allIssues}" >> "${resultFile}"
-    soffice --headless --convert-to pdf:calc_pdf_Export $resultFile --outdir $outputDir
-    rm -r $resultFile
+    csvgrep -c 5 -m "${security}" "${allIssuesCsv}" >> "${resultFile}"
     let i++
   done
 
 }
 
 saveAllIssues() {
- echo creating csv for all issues
- totalIssues=$(cat $issuesJson | jq '.total')
- echo '"Ticket No.","Ticket Summary","Resolution Status","Security Level","Credits"' >> $allIssues
-  for (( c=0; c<$totalIssues; c++ ))
+  echo creating csv for all issues
+  jq -r '["Ticket No.","Ticket Summary","Created On","Resolution Status","Security Level","Credits"], (.issues[] | [.key,.fields.summary,.fields.created,.fields.status.name,.fields.security.name,.fields.customfield_10500]) | @csv' ${issuesJson} >> ${tempAllIssues}
+  awk '{if(! a[$1]){print; a[$1]++}}' ${tempAllIssues} > ${allIssues}
+
+  echo '"Ticket No.","Ticket Summary","Created On","Resolution Status","Security Level","Credits"' >> ${allIssuesCsv}
+
+  while IFS="," read -r ticket_no ticket_summary created_on resolution_status security_level credits
   do
-    key=$(cat $issuesJson | jq '.issues['$c'].key')
-    summary=$(cat $issuesJson | jq '.issues['$c'].fields.summary')
-    issueStatus=$(cat $issuesJson | jq '.issues['$c'].fields.status.name')
-    security=$(cat $issuesJson | jq '.issues['$c'].fields.security.name')
-    credits=$(cat $issuesJson | jq '.issues['$c'].fields.customfield_10500')
-    echo "$key","$summary","$issueStatus","$security","$credits" >> $allIssues
-  done
+    IFS=T read -r var_date var_time<<<"$created_on"
+    string_date=$(sed -e 's/^"//' -e 's/"$//' <<<${var_date})
+    created_date=\"${string_date}\"
+    echo "$ticket_no","$ticket_summary","$created_date","$resolution_status","$security_level","$credits" >> ${allIssuesCsv}
+  done < <(tail -n +2 $allIssues)
+
+  rm $tempAllIssues
+  rm $allIssues
 
 }
 
 getIssues() {
+  echo 0 > ${tempFile}
   echo Creating issues Json
-  curl -X GET -H "Content-Type: application/json"  "https://openspecimen.atlassian.net/rest/api/3/search?jql=filter=18721" --user $userName:$token > $issuesJson
+  getTotalNumberOfIssues=$(curl -X GET -H "Content-Type: application/json"  "https://openspecimen.atlassian.net/rest/api/3/search?jql=filter=18721" --user $userName:$token)
+  numberOfIssues=`echo ${getTotalNumberOfIssues} | jq -r '.total'`
+
+  getPaginationCount=$((numberOfIssues/100))
+  paginationCount=$((getPaginationCount + 1))
+
+  for(( counter=0; counter<=paginationCount; counter++ ))
+  do
+    maxResults=100
+    echo $maxResults
+    echo startAt: $startAt
+    curl -X POST -H "Content-Type: application/json" -d '{"jql": "'"project = SUPPORT ORDER BY key ASC"'","startAt":"'"$startAt"'","maxResults":"'"$maxResults"'","fields":["key","summary","created","status","security","customfield_10500"]}' "https://openspecimen.atlassian.net/rest/api/2/search" --user $userName:$token >> ${issuesJson}
+    startAt=$[$(cat $tempFile) + 100]
+    echo $startAt > ${tempFile}
+  done
+  rm $tempFile
 
 }
 
-getIssues
-saveAllIssues
-sortClients
-getToken
-updateCustomer
+main() {
+  if [ ! -f "$configFile" ]
+  then
+    echo "Please input the config file"
+    exit 0;
+  fi
+  
+  source $configFile
+  getIssues
+  saveAllIssues
+  sortClients
+  getToken
+  getCustomerId
+
+}
+
+main;
