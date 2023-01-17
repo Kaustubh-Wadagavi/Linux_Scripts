@@ -25,15 +25,35 @@ getCustomerId() {
 
 }
 
+createCreditsFile() {
+  if [ -d "credits" ]; then $(rm -Rf credits); fi
+  mkdir credits
+  readarray -t uniqueInstitutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
+  
+  # while [ $i -lt $len ];
+  #do
+
+  #get Support contrack date
+  #if supportContractDate <= TicketCreationDate   
+  #then
+  #   Create new files with credits till todays date.
+  #else
+  #  Take next one
+  #fi
+  #done
+
+  
+
+
+}
+
 getToken() {
   session=$(curl -H "Content-Type: application/json" -X POST -d '{"loginName": "'"$loginName"'","password":"'"$password"'"}' "$url/rest/ng/sessions")
   token=`echo ${session} | jq -r '.token'`
 
 }
 
-
 sortClients() {
-  sed -e s/deletethis//g -i $allIssuesCsv
   echo sorting clients
   i=0
   echo $i
@@ -79,7 +99,7 @@ getIssues() {
   echo 0 > ${tempFile}
   echo Creating issues Json
   getTotalNumberOfIssues=$(curl -X GET -H "Content-Type: application/json"  "https://openspecimen.atlassian.net/rest/api/3/search?jql=filter=18721" --user $userName:$token)
-  numberOfIssues=`echo ${getTotalNumberOfIssues} | jq -r '.total'`
+  numberOfIssues=100     #`echo ${getTotalNumberOfIssues} | jq -r '.total'`
 
   getPaginationCount=$((numberOfIssues/100))
   paginationCount=$((getPaginationCount + 1))
@@ -106,10 +126,10 @@ main() {
   
   source $configFile
   getIssues
-  saveAllIssues
-  sortClients
-  getToken
-  getCustomerId
+ # saveAllIssues
+ # sortClients
+  #getToken
+  #getCustomerId
 
 }
 
