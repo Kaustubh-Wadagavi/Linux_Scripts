@@ -2,7 +2,7 @@
 
 configFile=$1
 
-getCustomerId() {
+uploadFileInDarpan() {
   c=0
   readarray -t customers < <(awk -F "," '{print $5}' $allIssues | awk 'NR!=1 {print}' | sort -u)
   customersCount=${#customers[@]}
@@ -15,8 +15,8 @@ getCustomerId() {
     customerId=`echo ${getCustomerDetails} | jq -r '.rows[0].hidden.cprId'`
     
     getFileName=$(echo $customerName | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
-    fileName=`ls -1 $outputDir | grep $getFileName`
-    getFileId=$(curl -H "X-OS-API-TOKEN: $token" -X POST -F file=@$outputDir/$fileName "$url/rest/ng/form-files")
+    fileName=`ls -1 $finalOutput | grep $getFileName`
+    getFileId=$(curl -H "X-OS-API-TOKEN: $token" -X POST -F file=@$finalOutput/$fileName "$url/rest/ng/form-files")
     fileId=`echo ${getFileId} | jq -r '.fileId'`
     
     updateCustomer=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X PUT -d '{"participant": {"ppid": "'"$customerName"'","extensionDetail":{"attrs":[{"name":"'"issues"'","value":{"filename":"'"$fileName"'","contentType": "'"text/csv"'","fileId": "'"$fileId"'"}}]}}}' "$url/rest/ng/collection-protocol-registrations/$customerId")
@@ -25,26 +25,47 @@ getCustomerId() {
 
 }
 
-createCreditsFile() {
-  if [ -d "credits" ]; then $(rm -Rf credits); fi
-  mkdir credits
-  readarray -t uniqueInstitutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
+createTotalCreditsFile() {
+  if [ -d "$finalOutput" ]; then $(rm -Rf $finalOutput); fi
+  k=0
+  mkdir $finalOutput
+  readarray -t institutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
+  instituteCount=${#institutes[@]}
+  echo $institutes
+
+
+ while [ $k -lt $instituteCount ];
+ do
+    getInstiName=${institutes[$i]}
+    client=$(sed -e 's/^"//' -e 's/"$//' <<<"$getInstiName")
+    getCustomerId=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$client"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
+ 
+    getJsonLength=`echo $getCustomerId | jq '.rows | length'`
+    echo getJsonLength:$getLength
+    if [[ $getJsonLength -gt 0 ]]
+    then
+       echo insideIf
+       customerId=`echo ${getCustomerId} | jq -r '.rows[0].hidden.cprId'`
+       getSupportDetails=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X GET "$url/rest/ng/collection-protocol-registrations/11")
+       startDateOfSupport=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[9].displayValue'`
+       read date mon year <<< $startDateOfSupport
+       supportStartDate=$(date -d "$date $mon $year" "+%Y-%m-%d")
+       
+       getInstituteName=${institutes[$i]}
+       name=$(sed -e 's/^"//' -e 's/"$//' <<<"$getInstituteName")
+       createFinalFileName=$(echo $name | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
+       finalFile=$createFinalFileName-$(date "+%Y-%m-%d").csv
+       finalResultFile=$finalOutput/$finalFile
   
-  # while [ $i -lt $len ];
-  #do
-
-  #get Support contrack date
-  #if supportContractDate <= TicketCreationDate   
-  #then
-  #   Create new files with credits till todays date.
-  #else
-  #  Take next one
-  #fi
-  #done
-
+       awk -F , '$3>="'"$supportStartDate"'" { print }' >> ${finalResultFile}
+       let k++
+    else
+       echo inside else
+       echo "$client: Not Found in Darpan" >> $logDir/${logFile}
+       let k++
+    fi
+done
   
-
-
 }
 
 getToken() {
@@ -59,8 +80,8 @@ sortClients() {
   echo $i
   if [ -d "$outputDir" ]; then $(rm -Rf $outputDir); fi
   mkdir $outputDir
-  readarray -t uniqueInstitutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
-  len=${#uniqueInstitutes[@]}
+  readarray -t institutesList < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
+  len=${#institutesList[@]}
   
   while [ $i -lt $len ];
   do
@@ -126,10 +147,11 @@ main() {
   
   source $configFile
   getIssues
- # saveAllIssues
- # sortClients
-  #getToken
-  #getCustomerId
+  saveAllIssues
+  sortClients
+  getToken
+  createTotalCreditsFile
+  uplodeFileInDarpan
 
 }
 
