@@ -4,22 +4,22 @@ configFile=$1
 
 uploadFileInDarpan() {
   c=0
-  readarray -t customers < <(awk -F "," '{print $5}' $allIssues | awk 'NR!=1 {print}' | sort -u)
+  readarray -t customers < <(awk -F "," '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
   customersCount=${#customers[@]}
 
   while [ $c -lt $customersCount ]
   do
     getCustomer=${customers[$c]}
     customerName=$(sed -e 's/^"//' -e 's/"$//' <<<"$getCustomer")  
-    getCustomerDetails=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$customerName"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
+    getCustomerDetails=$(curl -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$customerName"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
     customerId=`echo ${getCustomerDetails} | jq -r '.rows[0].hidden.cprId'`
     
     getFileName=$(echo $customerName | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
     fileName=`ls -1 $finalOutput | grep $getFileName`
-    getFileId=$(curl -H "X-OS-API-TOKEN: $token" -X POST -F file=@$finalOutput/$fileName "$url/rest/ng/form-files")
+    getFileId=$(curl -H "X-OS-API-TOKEN: $os_token" -X POST -F file=@$finalOutput/$fileName "$url/rest/ng/form-files")
     fileId=`echo ${getFileId} | jq -r '.fileId'`
     
-    updateCustomer=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X PUT -d '{"participant": {"ppid": "'"$customerName"'","extensionDetail":{"attrs":[{"name":"'"issues"'","value":{"filename":"'"$fileName"'","contentType": "'"text/csv"'","fileId": "'"$fileId"'"}}]}}}' "$url/rest/ng/collection-protocol-registrations/$customerId")
+    updateCustomer=$(curl -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" -X PUT -d '{"participant": {"ppid": "'"$customerName"'","extensionDetail":{"attrs":[{"name":"'"issues"'","value":{"filename":"'"$fileName"'","contentType": "'"text/csv"'","fileId": "'"$fileId"'"}}]}}}' "$url/rest/ng/collection-protocol-registrations/$customerId")
     let c++
   done
 
@@ -29,48 +29,47 @@ createTotalCreditsFile() {
   if [ -d "$finalOutput" ]; then $(rm -Rf $finalOutput); fi
   k=0
   mkdir $finalOutput
-  readarray -t institutes < <(awk -F , '{print $5}' $allIssuesCsv | awk 'NR!=1 {print}' | sort -u)
+  readarray -t institutes < <(awk -F , '{print $5}' ${allIssuesCsv} | awk 'NR!=1 {print}' | sort -u)
   instituteCount=${#institutes[@]}
-  echo $institutes
-
 
  while [ $k -lt $instituteCount ];
  do
-    getInstiName=${institutes[$i]}
+    getInstiName=${institutes[$k]}
     client=$(sed -e 's/^"//' -e 's/"$//' <<<"$getInstiName")
-    getCustomerId=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$client"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
- 
+    getCustomerId=$(curl -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$client"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
     getJsonLength=`echo $getCustomerId | jq '.rows | length'`
-    echo getJsonLength:$getLength
+    echo getJsonLength:$getJsonLength
     if [[ $getJsonLength -gt 0 ]]
     then
-       echo insideIf
-       customerId=`echo ${getCustomerId} | jq -r '.rows[0].hidden.cprId'`
-       getSupportDetails=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X GET "$url/rest/ng/collection-protocol-registrations/11")
-       startDateOfSupport=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[9].displayValue'`
-       read date mon year <<< $startDateOfSupport
-       supportStartDate=$(date -d "$date $mon $year" "+%Y-%m-%d")
-       
-       getInstituteName=${institutes[$i]}
-       name=$(sed -e 's/^"//' -e 's/"$//' <<<"$getInstituteName")
-       createFinalFileName=$(echo $name | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
-       finalFile=$createFinalFileName-$(date "+%Y-%m-%d").csv
-       finalResultFile=$finalOutput/$finalFile
-  
-       awk -F , '$3>="'"$supportStartDate"'" { print }' >> ${finalResultFile}
-       let k++
+      #Get Support Date
+      echo ""
+      echo $getJsonLength
+      customerId=`echo ${getCustomerId} | jq -r '.rows[0].hidden.cprId'`
+      getSupportDetails=$(curl -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" -X GET "$url/rest/ng/collection-protocol-registrations/$customerId")
+      startDateOfSupport=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[8].displayValue'`
+      read date mon year <<< $startDateOfSupport
+      supportStartDate=$(date -d "$date $mon $year" "+%Y-%m-%d")
+
+      #Export Issues from Support Start date
+      getSortedFile=$(echo $client | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
+      sortedFileName=`ls -1 $outputDir | grep $getSortedFile`
+      finalFile=$getSortedFile-$(date "+%Y-%m-%d").csv
+      finalResultFile=$finalOutput/$finalFile
+      echo ${outputDir}/${sortedFileName}
+      awk -F , '$3>="'"$supportStartDate"'" { print }' ${outputDir}/${sortedFileName}>>${finalResultFile}
+      let k++
     else
-       echo inside else
-       echo "$client: Not Found in Darpan" >> $logDir/${logFile}
-       let k++
+     echo Inside else
+     let k++
     fi
-done
+ done
   
 }
 
 getToken() {
   session=$(curl -H "Content-Type: application/json" -X POST -d '{"loginName": "'"$loginName"'","password":"'"$password"'"}' "$url/rest/ng/sessions")
-  token=`echo ${session} | jq -r '.token'`
+  os_token=`echo ${session} | jq -r '.token'`
+  echo $os_token
 
 }
 
@@ -85,8 +84,10 @@ sortClients() {
   
   while [ $i -lt $len ];
   do
-    getInstitute=${uniqueInstitutes[$i]} 
+    getInstitute=${institutesList[$i]} 
+    echo $getInstitute
     security=$(sed -e 's/^"//' -e 's/"$//' <<<"$getInstitute")
+    echo $security
     createFileName=$(echo $security | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
     file=$createFileName-$(date "+%Y-%m-%d").csv
     resultFile=$outputDir/$file
@@ -120,7 +121,7 @@ getIssues() {
   echo 0 > ${tempFile}
   echo Creating issues Json
   getTotalNumberOfIssues=$(curl -X GET -H "Content-Type: application/json"  "https://openspecimen.atlassian.net/rest/api/3/search?jql=filter=18721" --user $userName:$token)
-  numberOfIssues=100     #`echo ${getTotalNumberOfIssues} | jq -r '.total'`
+  numberOfIssues=100 #`echo ${getTotalNumberOfIssues} | jq -r '.total'`
 
   getPaginationCount=$((numberOfIssues/100))
   paginationCount=$((getPaginationCount + 1))
@@ -151,7 +152,7 @@ main() {
   sortClients
   getToken
   createTotalCreditsFile
-  uplodeFileInDarpan
+  uploadFileInDarpan
 
 }
 
