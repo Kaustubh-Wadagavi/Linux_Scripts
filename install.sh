@@ -65,13 +65,12 @@ initVariables() {
 }
 
 ensurePrerequisites() {
-  java8version=`java -version 2>&1 | grep -i version | sed 's/.*version ".*\.\(.*\)\..*"/\1/; 1q'`
-  java17version=$(java -version 2>&1 | grep -i version | awk '{print $3}' | cut -d'"' -f2 | cut -d'.' -f1)
+  javaversion=$(java -version 2>&1 | grep -i version | awk '{print $3}' | cut -d'"' -f2 | cut -d'.' -f1)
  
-  if [ "$java8version" == "8" ] || [ "$java17version" == "17" ]; then
+  if [ "$javaversion" == "17" ]; then
     echo "Java version check...pass"
   else
-    echo "Need to install Java 8 or 17 to proceed with installation."
+    echo "Install java 17 to proceed with installation."
     exit 1
   fi
   read -p "Is MySQL server installed on the same machine? If no, please make sure MySQL 5.7 version is installed on the remote database server (y/n):" input
