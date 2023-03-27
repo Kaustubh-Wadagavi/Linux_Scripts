@@ -93,8 +93,9 @@ sortClients() {
     createFileName=$(echo $security | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
     file=$createFileName-$(date "+%Y-%m-%d").csv
     resultFile=$outputDir/$file
-    csvgrep -c 3 -r "\b${security}\b" "${allIssuesCsv}" >> "${resultFile}"
-    let i++
+   # csvgrep -c 3 -r "\b${security}\b" "${allIssuesCsv}" >> "${resultFile}"
+   csvgrep -c 3 -r "^${security}$" "${allIssuesCsv}" >> "${resultFile}"
+   let i++
   done
 
 }
@@ -155,6 +156,8 @@ main() {
   getToken
   createTotalCreditsFile
   uploadFileInDarpan
+  rm -f ${issuesJson}
+  rm -f ${allIssuesCsv}
 
 }
 
