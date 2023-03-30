@@ -15,8 +15,7 @@ uploadFileInDarpan() {
     getCustomer=${customers[$c]}
     customerName=$(sed -e 's/^"//' -e 's/"$//' <<<"$getCustomer")
     getCustomerDetails=$(curl -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" -X POST -d '[{"expr":"'"Participant.ppid"'","values":["'"$customerName"'"]}]' "$url/rest/ng/lists/data?listName=participant-list-view&maxResults=101&objectId=1")
-    customerId=`echo ${getCustomerDetails} | jq -r '.rows[0].hidden.cprId'`
-    finalOutput=/home/krishagni/Desktop/jira-darpan-integration/finalOutput    
+    customerId=`echo ${getCustomerDetails} | jq -r '.rows[0].hidden.cprId'` 
     getFileName=$(echo $customerName | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
     fileName=`ls -1 $finalOutput | grep "\b$getFileName\b"`   #$getFileName`
     echo =======================================================================
@@ -102,17 +101,17 @@ sortClients() {
 
 saveAllIssues() {
   echo creating csv for all issues
-  jq -r '["Ticket No.","Created On","Security Level","Ticket Summary","Resolution Status","Credits"], (.issues[] | [.key,.fields.created,.fields.security.name,.fields.summary,.fields.status.name,.fields.customfield_10500]) | @csv' ${issuesJson} >> ${tempAllIssues}
+  jq -r '["Ticket No.","Created On","Security Level","Credits","Ticket Summary","Resolution Status"], (.issues[] | [.key,.fields.created,.fields.security.name,.fields.customfield_10500,.fields.summary,.fields.status.name]) | @csv' ${issuesJson} >> ${tempAllIssues}
   awk '{if(! a[$1]){print; a[$1]++}}' ${tempAllIssues} > ${allIssues}
 
-  echo '"Ticket No.","Created On","Security Level","Ticket Summary","Resolution Status","Credits"' >> ${allIssuesCsv}
+  echo '"Ticket No.","Created On","Security Level","Credits","Ticket Summary","Resolution Status"' >> ${allIssuesCsv}
 
-  while IFS="," read -r ticket_no created_on security_level ticket_summary resolution_status credits
+  while IFS="," read -r ticket_no created_on security_level credits ticket_summary resolution_status
   do
     IFS=T read -r var_date var_time<<<"$created_on"
     string_date=$(sed -e 's/^"//' -e 's/"$//' <<<${var_date})
     created_date=\"${string_date}\"
-    echo "$ticket_no","$created_date","$security_level","$ticket_summary","$resolution_status","$credits" >> ${allIssuesCsv}
+    echo "$ticket_no","$created_date","$security_level","$credits","$ticket_summary","$resolution_status" >> ${allIssuesCsv}
   done < <(tail -n +2 $allIssues)
 
   rm $tempAllIssues
