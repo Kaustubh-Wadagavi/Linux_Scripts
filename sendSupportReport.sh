@@ -4,23 +4,23 @@ configFile=$1
 
 sendEmail() {
   currentMonth=$(date '+%B_%Y')
-tempFile=tempfile.txt
-toEmail="kaustubh@krishagni.com, kaustubhwadagavi@gmail.com" # Add multiple email addresses separated by comma
-if [[ $toEmail == *,* ]]; then
-  mail1=$(echo $toEmail | cut -d ',' -f1)
-  mail2=$(echo $toEmail | cut -d ',' -f2)
-else
-  mail1=$toEmail
-fi
-announcement="<ol>
+  tempFile=tempfile.txt
+  toEmail="kaustubh@krishagni.com, kaustubhwadagavi@gmail.com" # Add multiple email addresses separated by comma
+  if [[ $toEmail == *,* ]]; then
+   mail1=$(echo $toEmail | cut -d ',' -f1)
+   mail2=$(echo $toEmail | cut -d ',' -f2)
+  else
+   mail1=$toEmail
+  fi
+  announcement="<ol>
     <li><a href='https://openspecimen.atlassian.net/wiki/x/BYDWmg'><span style='background-color:hsl(0, 0%, 100%);color:hsl(0, 75%, 60%);'><strong>v10.1 released</strong></span></a></li>
     <li><a href='https://openspecimen.org/oscon23'><span style='background-color:hsl(0, 0%, 100%);color:hsl(210, 75%, 60%);'><strong>Register for OSCON23&nbsp;(23-26 July, San Diego)</strong></span></a></li>
     <li><span style='background-color:hsl(0, 0%, 100%);color:hsl(30, 75%, 60%);font-family:Arial, Helvetica, sans-serif;'><strong>Kaustubh Wadagavi is getting married</strong></span></li>
 </ol>"
 
-reportFileHtml=$(awk -F',' 'BEGIN { print "<table border=1 cellpadding=5 cellspacing=0>"} {print "<tr>"; for(i=1;i<=NF;i++) {if (NR==1) printf "<th><b><font color=\"blue\">%s</font></b></th>", $i; else printf "<td>%s</td>", $i} print "</tr>"} END{print "</table>"}' $reportFile)
+  reportFileHtml=$(awk -F',' 'BEGIN { print "<table border=1 cellpadding=5 cellspacing=0>"} {print "<tr>"; for(i=1;i<=NF;i++) {if (NR==1) printf "<th><b><font color=\"blue\">%s</font></b></th>", $i; else printf "<td>%s</td>", $i} print "</tr>"} END{print "</table>"}' $reportFile)
 
-echo -e "To: $mail1, $mail2\ncc: $ccEmail1, $ccEmail2\nSubject: OpenSpecimen/$shortName: Monthly support log for $currentMonth\nContent-Type: text/html\n\n \
+  echo -e "To: $mail1, $mail2\ncc: $ccEmail1, $ccEmail2\nSubject: OpenSpecimen/$shortName: Monthly support log for $currentMonth\nContent-Type: text/html\n\n \
 Hello $projectManager,<br><br> \
 Below is the summary of the OpenSpecimen support activities.<br><br> \
 <b>Type of Support Package:</b> $contractType<br> \
@@ -33,8 +33,8 @@ Below is the summary of the OpenSpecimen support activities.<br><br> \
 $(echo "$announcement")<br><br> \
 $reportFileHtml" > $tempFile
 
-curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u $fromEmail:$emailPassword --mail-from $fromEmail -v --mail-rcpt $mail1 --mail-rcpt $mail2 --upload-file $tempFile
-rm -f $tempFile
+  curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u $fromEmail:$emailPassword --mail-from $fromEmail -v --mail-rcpt $mail1 --mail-rcpt $mail2 --upload-file $tempFile
+  rm -f $tempFile
 
 }
 
@@ -56,11 +56,8 @@ getClientsEmailId() {
      totalCredits=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[14].displayValue'`
      usedCredits=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[15].displayValue'`
      ignore=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[16].displayValue'`
-#     announcement=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[17].displayValue'`
-     echo $usedCredits
-     echo $ignore
-     echo $client
-     if [[ $ignore == "No" ]]; then
+#    announcement=`echo ${getSupportDetails} | jq -r '.participant.extensionDetail.attrs[17].displayValue'`
+     if [[ $ignore != "Yes" ]] && [[ $contractType != "Platinum" ]] && [[ $contractType != "Yet To Go-Live" ]] ; then
         sendEmail
      fi
    done
