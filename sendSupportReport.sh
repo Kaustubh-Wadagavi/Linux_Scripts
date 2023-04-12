@@ -25,10 +25,9 @@ Below is the summary of the OpenSpecimen support activities.<br><br> \
 <b>End date of contract:</b> $endDateOfContract<br> \
 <b>Total credits:</b> $totalCredits<br> \
 <b>Used credits:</b> $usedCredits<br><br> \
-<b>Current Version of OpenSpecimen:</b> <font color='blue'><b><i>$currentVersion</i></b></font><br><br> \
-<b>Your Version of OpenSpecimen:</b> <font color='red'><b><i>$yourCurrentVersion</i></b></font><br><br> \
+<b>Current Version of OpenSpecimen:</b> <b><i>$currentVersion</i></b><br><br> \
+<b>Your Version of OpenSpecimen:</b> <b><i>$yourCurrentVersion</i></b><br><br> \
 <b>Please find below details of support tickets:</b><br><br> \
-<font color='red'><b>Here are some interesting OpenSpecimen news for this month: </b></font><br> \
 $(echo "$announcement")<br><br> \
 $reportFileHtml" > "$tempFile"
 
