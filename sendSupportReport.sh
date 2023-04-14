@@ -5,7 +5,7 @@ configFile=$1
 sendEmail() {
   currentMonth=$(date '+%B_%Y')
   tempFile="$inputDir/files/tempfile.txt"
-  toEmail="bhimsen@krishagni.com, nilesh@krishagni.com" #$emailId
+  toEmail="$emailId"
   toEmail=$(echo "$toEmail" | tr -d ' ')
 
   if [[ $toEmail == *,* ]]; then
@@ -17,7 +17,7 @@ sendEmail() {
 
 reportFileHtml=$(awk -F',' 'BEGIN { print "<table border=1 cellpadding=5 cellspacing=0>"} {print "<tr>"; for(i=1;i<=NF;i++) { if (NR==1 && i!=3) printf "<th><b><font color=\"blue\">%s</font></b></th>", $i; else if (i!=3) printf "<td>%s</td>", $i } print "</tr>"} END{print "</table>"}' <(sed -E 's/^([^,]*,[^,]*,[^,]*,[^,]*,)("[^"]+",)(.*)/\1\2\3/; :a; s/("[^"]*),([^"]*")/\1\2/g; ta' "$inputDir/files/$fileName"))
 
-echo -e "To: $mail1, $mail2\ncc: $ccMail1, $ccMail2\nSubject: OpenSpecimen/$shortName: Monthly support log for $currentMonth\nContent-Type: text/html\n\n \
+echo -e "To: $mail1, $mail2\ncc: $ccMail1, $ccMail2, $ccMail3\nSubject: OpenSpecimen/$shortName: Monthly support log for $currentMonth\nContent-Type: text/html\n\n \
 Hello $projectManager,<br><br> \
 Below is the summary of the OpenSpecimen support activities.<br><br> \
 <b>Type of Support Package:</b> $contractType<br> \
@@ -26,15 +26,14 @@ Below is the summary of the OpenSpecimen support activities.<br><br> \
 <b>Total credits:</b> $totalCredits<br> \
 <b>Used credits:</b> $usedCredits<br><br> \
 <b>Current Version of OpenSpecimen:</b> <b><i>$currentVersion</i></b><br><br> \
-<b>Your Version of OpenSpecimen:</b> <b><i>$yourCurrentVersion</i></b><br><br> \
 <b>Please find below details of support tickets:</b><br><br> \
 $(echo "$announcement")<br><br> \
 $reportFileHtml" > "$tempFile"
 
 if [[ $toEmail == *,* ]]; then
-    curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u "$fromEmail:$emailPassword" --mail-from "$fromEmail" -v --mail-rcpt "$mail1" --mail-rcpt "$mail2" --mail-rcpt "$ccMail1" --mail-rcpt "$ccMail2" --upload-file "$tempFile"
+    curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u "$fromEmail:$emailPassword" --mail-from "$fromEmail" -v --mail-rcpt "$mail1" --mail-rcpt "$mail2" --mail-rcpt "$ccMail1" --mail-rcpt "$ccMail2" --mail-rcpt "$ccMail3" --upload-file "$tempFile"
 else
-    curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u "$fromEmail:$emailPassword" --mail-from "$fromEmail" -v --mail-rcpt "$mail1" --mail-rcpt "$ccMail1" --mail-rcpt "$ccMail2" --upload-file "$tempFile"
+    curl --ssl-reqd --url 'smtps://smtp.gmail.com:465' -u "$fromEmail:$emailPassword" --mail-from "$fromEmail" -v --mail-rcpt "$mail1" --mail-rcpt "$ccMail1" --mail-rcpt "$ccMail2" --mail-rcpt "$ccMail3" --upload-file "$tempFile"
 fi
 
 }
@@ -62,7 +61,6 @@ getClientDetails() {
      getAnnouncement=$(curl -X GET -H "X-OS-API-TOKEN: $os_token" -H "Content-Type: application/json" "$url/rest/ng/collection-protocols/1")
      announcement=`echo ${getAnnouncement} | jq -r '.extensionDetail.attrs[0].value'`
      currentVersion=`echo ${getAnnouncement} | jq -r '.extensionDetail.attrs[1].value'`
-     yourCurrentVersion="v9.1.RC1" # `echo ${getAnnouncement} | jq -r '.extensionDetail.attrs[].value'`
      if [[ $ignore != "Yes" ]] && [[ $contractType != "Yet To Go-Live" ]] && [[ $contractType != "Closed" ]] ; then
         sendEmail
      fi
