@@ -8,14 +8,11 @@ DB_CONNECTION=""
 COMMIT_FREQUENCY=5
 counter=0
 
-
 insertData() {
   batch=$(echo "$batch" | sed -e 's/^[[:space:]]*//')
-  sqlplus -S "${DB_USERNAME}/${DB_PASSWORD}@${DB_CONNECTION}" <<EOF
-    SET AUTOCOMMIT OFF;
-    $batch
-    COMMIT;
-EOF
+  echo "SET AUTOCOMMIT OFF;
+  $batch
+  COMMIT;" | sqlplus -S -L "${DB_USERNAME}/${DB_PASSWORD}@${DB_CONNECTION}"
 }
 
 # Read CSV file and insert records
