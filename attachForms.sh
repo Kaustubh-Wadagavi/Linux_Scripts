@@ -19,8 +19,8 @@ insertData() {
 } 
 
 getCpShortTitles() {
-  counter=0
-  local insertCount=1
+  local counter=0
+  local insertCount=25
 
   while IFS=, read -r shortTitle; do
     if [ -n "$shortTitle" ]; then
