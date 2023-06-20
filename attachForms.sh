@@ -8,19 +8,79 @@ cpShortTitles=""
 
 insertData() {
   echo $cpShortTitles
-  insertStatementMySQL="insert into catissue_form_context (container_id, entity_type, cp_id, sort_order, is_multirecord, is_sys_form, deleted_on, entity_id, notifs_enabled, data_in_notif) select forms.identifier, '$level', cp.identifier, null, 0, 0, null, null, 0, 0 from catissue_collection_protocol cp, dyextn_containers forms where cp.short_title in ( $cpShortTitles ) and forms.caption = '$formName'" 
-  mysql -u$dbUser -p$dbPass -D$dbName -e "set autocommit=0; $insertStatementMySQL; commit;"
+  insertStatementMySQL="
+   INSERT INTO catissue_form_context (
+    container_id, 
+    entity_type, 
+    cp_id,
+    sort_order,
+    is_multirecord,
+    is_sys_form,
+    deleted_on,
+    entity_id,
+    notifs_enabled,
+    data_in_notif
+  ) 
+  SELECT
+    forms.identifier,
+    '$level',
+    cp.identifier,
+    NULL,
+    0,
+    0,
+    NULL,
+    NULL,
+    0,
+    0
+  FROM
+    catissue_collection_protocol cp,
+    dyextn_containers forms
+  WHERE
+    cp.short_title IN ($cpShortTitles)
+    AND forms.caption = '${formName}'
+"
+   mysql -u$dbUser -p$dbPass -D$dbName -e "set autocommit=0; $insertStatementMySQL; commit;"
   
-  #insertStatementOracle="insert into catissue_form_context ( container_id, entity_type, cp_id, sort_order, is_multirecord, is_sys_form, deleted_on, entity_id, notifs_enabled, data_in_notif ) SELECT forms.identifier, '$level', cp.identifier, null, 0, 0, null, null, 0, 0 FROM catissue_collection_protocol cp, dyextn_containers forms where cp.short_title in ( $cpShortTitles ) and forms.caption = '$formName'"
-  #echo "set autocommit off;
-  #$insertStatementOracle
-  #commit;" | sqlplus -S -L "${DB_USERNAME}/${DB_PASSWORD}@${DB_CONNECTION}"
+
+#  insertStatementOracle="
+#  INSERT INTO catissue_form_context (
+#    identifier                       
+#    container_id,
+#    entity_type,
+#    cp_id,
+#    sort_order,
+#    is_multirecord,
+#    is_sys_form,
+#    deleted_on,
+#    entity_id,
+#    notifs_enabled,
+#    data_in_notif
+#  )
+#  SELECT
+#    forms.identifier,
+#    '$level',
+#    cp.identifier,
+#    NULL,
+#    0,
+#    0,
+#    NULL,
+#    NULL,
+#    0,
+#    0
+#  FROM
+#    catissue_collection_protocol cp,
+#    dyextn_containers forms
+#  WHERE
+#    cp.short_title IN ($cpShortTitles)
+#    AND forms.caption = '$formName'"
+  
+#  echo "set autocommit off; $insertStatementOracle commit;" | sqlplus -S -L "${DB_USERNAME}/${DB_PASSWORD}@${DB_CONNECTION}"
 
 } 
 
-getCpShortTitles() {
+createBatchAndInsert() {
   local counter=0
-  local insertCount=25
+  local insertCount=1
 
   while IFS=, read -r shortTitle; do
     if [ -n "$shortTitle" ]; then
@@ -82,7 +142,7 @@ main() {
     exit 1
   fi
 
-  getCpShortTitles
+  createBatchAndInsert
 
 }
 
