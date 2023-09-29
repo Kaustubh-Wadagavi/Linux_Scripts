@@ -51,9 +51,7 @@ createAndRunTheImportJob() {
 getFileId() {
    if [ ! -z $TOKEN ]; then
       FILE_ID_DETAILS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X POST --form "file=@$FILE" "$URL/rest/ng/import-jobs/input-file")
-      echo $FILE_ID_DETAILS
       FILE_ID=$(echo $FILE_ID_DETAILS | jq -r '.fileId')
-      echo $FILE_ID
    else 
       echo "Authentication is not done. Please enter correct username and password."
       exit 0;
@@ -70,9 +68,9 @@ startSessions() {
 }
 
 main() {
+  source "$CONFIG_FILE"
   if [[ "$FILE" != *.csv ]]; then
     echo "Error: The FILE parameter must end with '.csv'."
-    displayUsage
   fi
 
   startSessions
@@ -82,23 +80,18 @@ main() {
 
 }
 
-if [ "$#" -ne "11" ]; then
-  echo First if
-  echo "Usage: ./upload_cp_data.sh <fileName>.csv <csv type> <username> <password> <url> <object type> <import type> <date format> <time format> <entity Type> <Form Name>"
-  echo "Please provide command line parameters as mentioned above."
-  exit 1
-else
-  FILE=$1
-  CSV_TYPE=$2
-  USERNAME=$3
-  PASSWORD=$4
-  URL=$5
-  OBJECT_TYPE=$6
-  IMPORT_TYPE=$7
-  DATE_FORMAT=$8
-  TIME_FORMAT=$9
-  ENTITY_TYPE="$10"
-  FORM_NAME="$11"
-  main;
+if [ $# -ne 1 ]; then
+  echo "Usage: ./upload_cp_data.sh <config file>"
+  echo "Please provide a config file with command line parameters."
+  exit 1;
 
 fi
+
+CONFIG_FILE=$1
+if [ ! -e "$CONFIG_FILE" ]; then
+  echo "Error: Configuration file '$CONFIG_FILE' not found."
+  exit 1;
+
+fi
+
+main;
