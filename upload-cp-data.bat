@@ -1,6 +1,19 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Main function
+:main
+if not "%~1"=="" (
+    call :startSessions
+    call :getFileId
+    call :createAndRunTheImportJob
+    call :checkJobStatusAndDownloadReport
+) else (
+    echo Usage: %~nx0 ^<config file^>
+    echo Please provide a config file with command line parameters.
+    exit /b 1
+)
+
 :: Function to check job status and download report
 :checkJobStatusAndDownloadReport
 if not "%TOKEN%"=="" (
@@ -67,18 +80,5 @@ for /f "delims=" %%i in ('curl -u %USERNAME%:%PASSWORD% -X POST -H "Content-Type
     "loginName":"%USERNAME%",
     "password":"%PASSWORD%"
 ^^^} "%URL%/rest/ng/sessions" ^| jq -r ".token"') do set "TOKEN=%%i"
-
-:: Main function
-:main
-if not "%~1"=="" (
-    call :startSessions
-    call :getFileId
-    call :createAndRunTheImportJob
-    call :checkJobStatusAndDownloadReport
-) else (
-    echo Usage: %~nx0 ^<config file^>
-    echo Please provide a config file with command line parameters.
-    exit /b 1
-)
 
 :end
