@@ -2,9 +2,7 @@
 
 checkJobStatusAndDownloadReport() {
    if [ ! -z $TOKEN ];then
-      RUNNING_JOB_STATUS=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/rest/ng/import-jobs/")
-      echo $RUNNING_JOB_STATUS
-      CURRENT_RUNNING_JOB=$(echo $RUNNING_JOB_STATUS | jq 'max_by(.id)')
+      CURRENT_RUNNING_JOB=$(curl -H "X-OS-API-TOKEN: $TOKEN" -X GET "$URL/rest/ng/import-jobs/$JOB_ID")
       JOB_ID=$(echo $CURRENT_RUNNING_JOB | jq -r '.id')
       JOB_STATUS=$(echo $CURRENT_RUNNING_JOB | jq -r '.status')
    else
@@ -39,8 +37,10 @@ createAndRunTheImportJob() {
                                                                                                                    "formName": "'"$FORM_NAME"'",
                                                                                                                    "cpId": -1
                                                                                                                 },
-                                                                                                                "atomic": true
+                                                                                                                "atomic": false
                                                                                                              }' "$URL/rest/ng/import-jobs")
+   echo $IMPORT_JOB_DETAILS
+   JOB_ID=$(echo $IMPORT_JOB_DETAILS | jq -r '.id')
    else
       echo "The Input file is not accepted by Server. Please send CSV file."
       exit 0;
