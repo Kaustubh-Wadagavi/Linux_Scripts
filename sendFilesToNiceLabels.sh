@@ -1,8 +1,8 @@
 #!/bin/bash
 
 NICE_LABEL_URL="https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger"
-SUBSCRIPTION_KEY="95b04f6f743f440894d2553fa237c442"
-PRINT_LABELS_FOLDER="/home/krishagni/Desktop/umcg-print-labels/print-labels"
+SUBSCRIPTION_KEY=""
+PRINT_LABELS_FOLDER=""
 TEMP_FILE="/tmp/labels-list.txt"
 LOCK_FILE="/tmp/labels.lock"
 
