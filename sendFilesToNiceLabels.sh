@@ -3,59 +3,60 @@
 NICE_LABEL_URL="https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger"
 SUBSCRIPTION_KEY="95b04f6f743f440894d2553fa237c442"
 PRINT_LABELS_FOLDER="/home/krishagni/Desktop/umcg-print-labels/print-labels"
+TEMP_FILE="/tmp/labels-list.txt"
+LOCK_FILE="/tmp/labels.lock"
 
 sendLabels() {
-  if [ -d $PRINT_LABELS_FOLDER ]; then
-    FILE_COUNT=$(find "$PRINT_LABELS_FOLDER" -type f | wc -l)
-    if [ "$FILE_COUNT" -ne 0 ]; then
+  JSON_OUTPUT='{"PrintJob": {"Block":{'
+  while IFS= read -r FILE; do
+    JSON_OUTPUT+='"Print": ['
+    JSON_OUTPUT+='{"value": "IdenticalCopies","1"}'
+    while IFS='=' read -r KEY VALUE; do
+      KEY=$(echo "$KEY" | awk '{$1=$1; print}')
+      VALUE=$(echo "$VALUE" | awk '{$1=$1; print}')
+      JSON_OUTPUT+='{"value": "'"$KEY"'","'"$VALUE"'"}'
+    done < "$FILE"
+    rm "$FILE"
+    JSON_OUTPUT+=']'
+  done < ${TEMP_FILE}
+  JSON_OUTPUT+='}}}'
+  
+  CONTENT_LENGTH=$(echo "$JSON_OUTPUT" | jq -Rr 'length')
+
+  GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:$CONTENT_LENGTH" --data "$JSON_OUTPUT" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/PRINT_LABEL")
+   
+  if [ "$GET_SENDING_STATUS" == "Label sent to printer" ]; then
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "$JSON_OUTPUT SENT SUCCESSFULLY"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  else
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    echo "ERROR!! SENDING ERROR CODE: $GET_SENDING_STATUS"
+    echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  fi
+
+}
+
+createLabelsFilesList() {
+   if [ -d $PRINT_LABELS_FOLDER ]; then
+     FILE_COUNT=$(find "$PRINT_LABELS_FOLDER" -type f | wc -l)
+     if [ "$FILE_COUNT" -ne 0 ]; then
       find $PRINT_LABELS_FOLDER -type f | while read FILE; 
       do
-	JSON="{\"PrintJob\":{\"Block\":{\"Print\":[{\"value\":\"IdenticalCopies\",\"1\"}"
-	# Read the input file line by line
-        while IFS= read -r LINE
-        do
-         # Split the line into key and value
-         IFS="=" read -ra PARTS <<< "$LINE"
-         KEY="${PARTS[0]}"
-         VALUE="${PARTS[1]}"
-
-         # Escape special characters in the value
-         VALUE="${VALUE//\"/\\\"}"
-
-         # Add key-value pairs to the JSON structure
-         JSON="${JSON} {\"value\":\"${KEY}\",\"${VALUE}\"}"
-        done < "$FILE"
-
-       # Close the JSON structure
-       JSON="${JSON}]}}}"
-       # Print the final JSON
-       echo "$JSON"
-       CONTENT_LENGTH=$(echo "$JSON" | jq -Rr 'length')
-
-       GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:$CONTENT_LENGTH" --data "$JSON" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/PRINT_LABEL")
-       if [ "$GET_SENDING_STATUS" == "Label sent to printer" ]; then
-         echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-         echo "$FILE SENT SUCCESSFULLY"
-	 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-         #rm $FILE
-       else
-	 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-         echo "ERROR!! SENDING ERROR CODE: $GET_SENDING_STATUS"
-	 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-       fi
+       echo ${FILE} >> $TEMP_FILE
       done
      else
        echo "=============================================="
        echo "          NO NEW FILES FOUND: BYE!            "
        echo "=============================================="
        exit 0;
-      fi
+     fi
    else
      echo "=============================================="
      echo "          DIRECTORY NOT FOUND: BYE!           "
      echo "=============================================="
    fi
-   
+
 }
 
 checkAuthentication() {
@@ -74,14 +75,22 @@ checkAuthentication() {
 main() {
    checkAuthentication
    SUCCESS=$?
-   
+
    if [ $SUCCESS -eq 0 ];then
+    trap "rm -f $TEMP_FILE" 0 1 15
+    trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
+    echo $$ > $LOCK_FILE
+    createLabelsFilesList
     sendLabels
    else
     echo "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*"
     echo "      Please enter valid subsription key to authenticate nice Labels APIs.     "
     echo "*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*"
    fi 
+   
+   rm -f $TEMP_FILE
+   rm -f $LOCK_FILE
+   exit 0;
 
 }
 
