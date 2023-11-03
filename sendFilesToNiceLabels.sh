@@ -1,8 +1,8 @@
 #!/bin/bash
 
-NICE_LABEL_URL=
-SUBSCRIPTION_KEY=
-TRIGGER_ID=
+NICE_LABEL_URL="https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger"
+SUBSCRIPTION_KEY=""
+TRIGGER_ID="UMCG_BIMS_PRINTLABEL"
 PRINT_LABELS_FOLDER="/home/krishagni/Desktop/umcg-print-labels/print-labels"
 TEMP_FILE="/tmp/labels-list.txt"
 LOCK_FILE="/tmp/labels.lock"
@@ -19,10 +19,17 @@ sendLabels() {
     OBJECT=''
     OBJECT+='{'
     OBJECT+='"IdenticalCopies":"1",'
+    OBJECT+='"Quantity":"1",'
 
     while IFS='=' read -r KEY VALUE; do
       KEY=$(echo "$KEY" | awk '{$1=$1; print}')
       VALUE=$(echo "$VALUE" | awk '{$1=$1; print}')
+
+      #` Add the "Specimen Quantity" key-value pair
+      if [[ $KEY == "Quantity" ]]; then
+        KEY="Specimen Quantity"
+      fi
+
       OBJECT+='"'"$KEY"'":"'"$VALUE"'",'
     done < "$FILE"
 
@@ -30,15 +37,16 @@ sendLabels() {
     JSON_OUTPUT+="${UPDATED_OBJECT}"
     JSON_OUTPUT+='}'
     FIRST_OBJECT=false
+    rm $FILE
   done < ${TEMP_FILE}
 
   JSON_OUTPUT+=']}}'
-  echo "$JSON_OUTPUT"
+  echo $JSON_OUTPUT
   CONTENT_LENGTH=$(echo "$JSON_OUTPUT" | jq -Rr 'length')
 
-  GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:$CONTENT_LENGTH" --data "$JSON_OUTPUT" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/PRINT_LABEL")
-   
-  if [ "$GET_SENDING_STATUS" == "Label sent to printer" ]; then
+  GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:$CONTENT_LENGTH" --data "$JSON_OUTPUT" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/$TRIGGER_ID")
+
+  if [ "$GET_SENDING_STATUS" == "Labels printed " ]; then
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     echo "$JSON_OUTPUT SENT SUCCESSFULLY"
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -72,40 +80,16 @@ createLabelsFilesList() {
 
 }
 
-checkAuthentication() {
-   AUTH_STATUS=$(curl -o /dev/null -s -w "%{http_code}" -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:0" "$NICE_LABEL_URL/$TRIGGER_ID")
-   GET_RESPONSE=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:0" "$NICE_LABEL_URL/$TRIGGER_ID")
-   if [ "$AUTH_STATUS" -eq 200 ]; then 
-     return 0;
-   else
-     echo "============================================================================="
-     echo "       ERROR: Authentication failed with HTTP Status Code: $AUTH_STATUS      "
-     echo "============================================================================="
-     echo "       ERROR: $GET_RESPONSE                                                  "                                             
-     return 1;
-   fi
-
-}
-
 main() {
-   checkAuthentication
-   SUCCESS=$?
-
-   if [ $SUCCESS -eq 0 ];then
-    trap "rm -f $TEMP_FILE" 0 1 15
-    trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
-    echo $$ > $LOCK_FILE
-    createLabelsFilesList
-    sendLabels
-   else
-    echo "============================================================================="
-    echo "      Please enter valid subsription key to authenticate nice Labels APIs.   "
-    echo "============================================================================="
-   fi 
-   
-   rm -f $TEMP_FILE
-   rm -f $LOCK_FILE
-   exit 0;
+  trap "rm -f $TEMP_FILE" 0 1 15
+  trap "rm -f $LOCK_FILE; exit" INT TERM EXIT
+  echo $$ > $LOCK_FILE
+  createLabelsFilesList
+  sendLabels
+    
+  rm -f $TEMP_FILE
+  rm -f $LOCK_FILE
+  exit 0;
 
 }
 
