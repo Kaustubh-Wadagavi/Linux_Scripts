@@ -1,9 +1,9 @@
 #!/bin/bash
 
-NICE_LABEL_URL="https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger"
+NICE_LABEL_URL=""
 SUBSCRIPTION_KEY=""
 TRIGGER_ID="UMCG_BIMS_PRINTLABEL"
-PRINT_LABELS_FOLDER="/home/krishagni/Desktop/umcg-print-labels/print-labels"
+PRINT_LABELS_FOLDER="/usr/local/openspecimen/os-test/data/print-labels"
 TEMP_FILE="/tmp/labels-list.txt"
 LOCK_FILE="/tmp/labels.lock"
 
@@ -16,39 +16,43 @@ sendLabels() {
      JSON_OUTPUT+=','
     fi
 
-    OBJECT=''
-    OBJECT+='{'
-    OBJECT+='"IdenticalCopies":"1",'
-    OBJECT+='"Quantity":"1",'
+    OBJECT='{ "Quantity": "1", "IdenticalCopies": "1", '
+    OTHER_KEYS=''
 
     while IFS='=' read -r KEY VALUE; do
       KEY=$(echo "$KEY" | awk '{$1=$1; print}')
       VALUE=$(echo "$VALUE" | awk '{$1=$1; print}')
 
-      #` Add the "Specimen Quantity" key-value pair
-      if [[ $KEY == "Quantity" ]]; then
-        KEY="Specimen Quantity"
-      fi
+      # Add the "Specimen Quantity" key-value pair
+        if [[ $KEY == "Quantity" ]]; then
+          KEY="Specimen Quantity"
+        fi
 
-      OBJECT+='"'"$KEY"'":"'"$VALUE"'",'
+        if [ "$KEY" == "Label Design" ]; then
+          LABEL_DESIGN='"'"$KEY"'":"'"$VALUE"'"'
+        else
+          OBJECT+='"'"$KEY"'":"'"$VALUE"'",'
+        fi
     done < "$FILE"
+    # Trim trailing commas and spaces from OBJECT and OTHER_KEYS strings
+    OBJECT=$(echo "$OBJECT" | sed 's/\(.*\),/\1/')
+    LABEL_DESIGN=$(echo "$LABEL_DESIGN" | sed 's/\(.*\),/\1/')
 
-    UPDATED_OBJECT=${OBJECT%,} # Remove the trailing comma from the object
-    JSON_OUTPUT+="${UPDATED_OBJECT}"
-    JSON_OUTPUT+='}'
+    JSON_OUTPUT+="$OBJECT, $LABEL_DESIGN }"
     FIRST_OBJECT=false
     rm $FILE
-  done < ${TEMP_FILE}
+  done < "$TEMP_FILE"
 
   JSON_OUTPUT+=']}}'
-  echo $JSON_OUTPUT
-  CONTENT_LENGTH=$(echo "$JSON_OUTPUT" | jq -Rr 'length')
+  
+  JSON_OUTPUT_BEAUTIFY=$(echo "$JSON_OUTPUT" | jq '.')
+  echo $JSON_OUTPUT_BEAUTIFY
 
-  GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" -H "Content-Length:$CONTENT_LENGTH" --data "$JSON_OUTPUT" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/$TRIGGER_ID")
+  GET_SENDING_STATUS=$(curl -X POST -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY" -H "Content-Type: application/json" --data "$JSON_OUTPUT_BEAUTIFY" "https://labelcloudapi.onnicelabel.com/Trigger/v1/CloudTrigger/$TRIGGER_ID")
 
   if [ "$GET_SENDING_STATUS" == "Labels printed " ]; then
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    echo "$JSON_OUTPUT SENT SUCCESSFULLY"
+    echo "$JSON_OUTPUT_BEAUTIFY SENT SUCCESSFULLY"
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
   else
     echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
