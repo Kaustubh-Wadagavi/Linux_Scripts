@@ -29,8 +29,7 @@ getFile() {
 }
 	
 exportQuery() {
-  getDataFile=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X POST --data '{ "savedQueryId": '$queryId',"drivingForm": "'"$drivingForm"'","cpId":-1,"runType": "Export","aql": "'"$aql"'","indexOf": "Specimen.label","wideRowMode": "'"$wideRowMode"'","outputColumnExprs": false,"caseSensitive": false
-}' "$url/rest/ng/query/export")
+  getDataFile=$(curl -H "X-OS-API-TOKEN: $token" -H "Content-Type: application/json" -X POST --data '{ "savedQueryId": '$queryId',"drivingForm": "'"$drivingForm"'","cpId":-1,"aql": "'"$aql"'","wideRowMode": "'"$wideRowMode"'"}' "$url/rest/ng/query/export")
   
   dataFileId=$(echo "$getDataFile" | jq -r '.dataFile')
 
