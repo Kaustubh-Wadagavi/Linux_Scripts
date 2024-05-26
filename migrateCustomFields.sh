@@ -1,16 +1,13 @@
-#!/bin/bash
-
 DB_USER=root
 DB_PASS=secrete
 DB_STRING=
 DB_NAME=v103rc4
 
 migrateFormsData() {
-   mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
-   SET autocommit=0;
-   SELECT MAX(IDENTIFIER) INTO @MAX_ID FROM DE_E_11076;
-EOF
-
+   mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SET autocommit=0;"
+   MAX_ID_SQL="SELECT MAX(IDENTIFIER) FROM DE_E_11076;"
+   MAX_ID=$(mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "$MAX_ID_SQL")
+   
    counter=0
    tail -n +2 "$inputFile" | while IFS=, read -r IDENTIFIER EXT_SUB_ID DE_A_1 DE_A_2 DE_A_3
    do
@@ -20,11 +17,10 @@ EOF
      DE_TABLE_INSERT="INSERT INTO DE_E_11076(IDENTIFIER, DE_A_1, DE_A_2, DE_A_3) VALUES ($MAX_ID, '$DE_A_1', '$cleaned_DE_A_2', '$DE_A_3');"
      CATISSUE_FORM_REC_ENTRY_SQL="INSERT INTO CATISSUE_FORM_RECORD_ENTRY(FORM_CTXT_ID, OBJECT_ID, RECORD_ID, UPDATED_BY, UPDATE_TIME, ACTIVITY_STATUS, FORM_STATUS, OLD_OBJECT_ID) VALUES (41,$IDENTIFIER, $MAX_ID, 2, Now(), 'ACTIVE', 'COMPLETE', null);"
      
-     mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
-     $REG_UPDATE_SQL
-     $DE_TABLE_INSERT
-     $CATISSUE_FORM_REC_ENTRY_SQL
-EOF
+     mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "$REG_UPDATE_SQL"
+     mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "$DE_TABLE_INSERT"
+     mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "$CATISSUE_FORM_REC_ENTRY_SQL"
+
      counter=$((counter + 1))
      if ((counter % 100 == 0)); then
        mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "COMMIT;"
