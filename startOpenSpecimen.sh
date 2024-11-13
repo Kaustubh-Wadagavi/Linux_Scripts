@@ -1,16 +1,17 @@
 #!/bin/bash
 
-URL=http://localhost:8080/os/
-TOMCAT_HOME=/usr/local/openspecimen/tomcat-as/
-EMAIL_ID="do-not-reply@krishagni.com"
-EMAIL_PASS="fmhrtiydtzqnfyke"
-RCPT_EMAIL_ID="kaustubh@krishagni.com"
+URL=http://localhost:8080/openspecimen/
+TOMCAT_HOME=/usr/local/openspecimen/tomcat-as/bin/
+EMAIL_ID=
+EMAIL_PASS=
+RCPT_EMAIL_ID=
 CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
 SMTP_SERVER="smtp.gmail.com"
 SMTP_PORT=587
 CLIENT_NAME_AND_ENVIRONMENT="OpenSpecimen/Kaustubh: Test Server"
 
 ALL_ERRORS=""
+RESTART_SUCCESS=false
 
 sendEmail() {
     local SUBJECT=$1
@@ -30,39 +31,35 @@ genericErrorNotification() {
 trap 'genericErrorNotification "An unexpected error occurred in the script: $(cat /tmp/script_error.log)"; exit 1' ERR
 
 restartServer() {
-    if [[ ! -f "$TOMCAT_HOME/bin/pid.txt" ]]; then
-        genericErrorNotification "pid.txt not found!"
-        exit 1
-    fi
-    
     if (( $(ps -ef | grep -v grep | grep tomcat | wc -l) > 0 )); then
-        $TOMCAT_HOME/bin/shutdown.sh -force 2>/tmp/script_error.log
+        $TOMCAT_HOME/shutdown.sh -force 2>/tmp/script_error.log
         local SHUTDOWN_STATUS=$?
         if [[ $SHUTDOWN_STATUS -ne 0 ]]; then
             genericErrorNotification "Tomcat shutdown failed: $(cat /tmp/script_error.log)"
-            exit 1
+            return 1
         fi
 
-        $TOMCAT_HOME/bin/startup.sh 2>/tmp/script_error.log
+        $TOMCAT_HOME/startup.sh 2>/tmp/script_error.log
         local STARTUP_STATUS=$?
         if [[ $STARTUP_STATUS -ne 0 ]]; then
             genericErrorNotification "Tomcat startup failed: $(cat /tmp/script_error.log)"
-            exit 1
+            return 1
         fi
 
-        sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Restarted Successfully" "Hello,\n\nThe OpenSpecimen server restarted successfully at $CURRENT_TIME. Please check why it was restarted.\n\nThanks."
-        return 0
-    else
-        genericErrorNotification "Tomcat process not running!"
-        exit 1
+        RESTART_SUCCESS=true  # Mark restart as successful
+        if [[ "$RESTART_SUCCESS" == true ]]; then
+           sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Restarted Successfully" "Hello,\n\nThe OpenSpecimen server restarted successfully at $CURRENT_TIME. Please check why it was restarted.\n\nThanks."
+        fi
+
+	return 0
     fi
 }
 
 checkPid() {
-    if [ -f "$TOMCAT_HOME/bin/pid.txt" ]; then
-      return 0;
-    else 
-      return 1;
+    if [ -f "$TOMCAT_HOME/pid.txt" ]; then
+      return 0
+    else
+      return 1
     fi
 }
 
@@ -78,7 +75,8 @@ invokeApi() {
 }
 
 main() {
-    for ((COUNT=0; COUNT <= 1; COUNT++)); do
+    # Retry API invocation up to 10 times
+    for ((COUNT=0; COUNT <= 10; COUNT++)); do
         invokeApi
         if [[ $? -eq 0 ]]; then
             echo "App is running..."
@@ -88,19 +86,22 @@ main() {
         sleep 10
     done
 
+    # Check if PID file exists, then attempt to restart the server
     checkPid
     PID_EXISTS=$?
     if [ $PID_EXISTS -eq 0 ]; then
-      restartServer
-      exit 0
+        restartServer
     fi
 
-    # Send accumulated errors if any
+    # Send the appropriate email based on the outcome
     if [[ -n "$ALL_ERRORS" ]]; then
-        sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Error Notifications" "Hello,\n\nThe following errors occurred during script execution at $CURRENT_TIME:\n$ALL_ERRORS\n\nPlease investigate the issues.\n\nThanks."
+        # If there were errors and the server wasn't successfully restarted
+        if [[ "$RESTART_SUCCESS" == false ]]; then
+            sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Auto Restart Script Error Notifications" "Hello,\n\nThe following errors occurred during auto restart script execution at $CURRENT_TIME:\n$ALL_ERRORS\n\nPlease investigate the issues.\n\nThanks."
+        fi
     fi
 
-    exit 0 
+    exit 0;
 }
 
 main;
