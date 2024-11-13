@@ -59,7 +59,7 @@ checkPid() {
     if [ -f "$TOMCAT_HOME/pid.txt" ]; then
       return 0
     else
-      return 1
+      exit 0
     fi
 }
 
