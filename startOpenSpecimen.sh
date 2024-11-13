@@ -2,9 +2,9 @@
 
 URL=http://localhost:8080/openspecimen/
 TOMCAT_HOME=/usr/local/openspecimen/tomcat-as/bin/
-EMAIL_ID=
-EMAIL_PASS=
-RCPT_EMAIL_ID=
+EMAIL_ID=""
+EMAIL_PASS=""
+RCPT_EMAIL_ID=""
 CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
 SMTP_SERVER="smtp.gmail.com"
 SMTP_PORT=587
@@ -51,7 +51,7 @@ restartServer() {
            sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Restarted Successfully" "Hello,\n\nThe OpenSpecimen server restarted successfully at $CURRENT_TIME. Please check why it was restarted.\n\nThanks."
         fi
 
-	return 0
+	exit 0 
     fi
 }
 
@@ -65,20 +65,15 @@ checkPid() {
 
 invokeApi() {
     wget --no-check-certificate -O applog $URL/rest/ng/config-settings/app-props 2>/tmp/script_error.log
-    local WGET_STATUS=$?
-    if [[ $WGET_STATUS -ne 0 ]]; then
-        echo "Warning: API invocation failed, but ignoring wget error."
-        genericErrorNotification "API invocation failed: $(cat /tmp/script_error.log)"
-        return 1
-    fi
-    return 0
+    return $?
+
 }
 
 main() {
-    # Retry API invocation up to 10 times
-    for ((COUNT=0; COUNT <= 10; COUNT++)); do
+    for ((COUNT=0; COUNT <= 1; COUNT++)); do
         invokeApi
-        if [[ $? -eq 0 ]]; then
+	STATUS=$?
+        if [[ $STATUS -eq 0 ]]; then
             echo "App is running..."
             trap - ERR
             exit 0
@@ -86,14 +81,13 @@ main() {
         sleep 10
     done
 
-    # Check if PID file exists, then attempt to restart the server
     checkPid
     PID_EXISTS=$?
     if [ $PID_EXISTS -eq 0 ]; then
         restartServer
     fi
 
-    # Send the appropriate email based on the outcome
+    
     if [[ -n "$ALL_ERRORS" ]]; then
         # If there were errors and the server wasn't successfully restarted
         if [[ "$RESTART_SUCCESS" == false ]]; then
