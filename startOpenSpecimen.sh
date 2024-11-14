@@ -1,17 +1,19 @@
 #!/bin/bash
 
-URL=http://localhost:8080/openspecimen/
+URL=https://host/
 TOMCAT_HOME=/usr/local/openspecimen/tomcat-as/bin/
-EMAIL_ID=""
+EMAIL_ID="do-not-reply@krishagni.com"
 EMAIL_PASS=""
 RCPT_EMAIL_ID=""
 CURRENT_TIME=$(date +"%Y-%m-%d %H:%M:%S")
 SMTP_SERVER="smtp.gmail.com"
 SMTP_PORT=587
-CLIENT_NAME_AND_ENVIRONMENT="OpenSpecimen/Kaustubh: Test Server"
+CLIENT_NAME_AND_ENVIRONMENT="OpenSpecimen/CUMC: Test Server"
 
 ALL_ERRORS=""
 RESTART_SUCCESS=false
+
+LOG_FILE="/tmp/auto_restart.log"
 
 sendEmail() {
     local SUBJECT=$1
@@ -51,30 +53,30 @@ restartServer() {
            sendEmail "$CLIENT_NAME_AND_ENVIRONMENT Restarted Successfully" "Hello,\n\nThe OpenSpecimen server restarted successfully at $CURRENT_TIME. Please check why it was restarted.\n\nThanks."
         fi
 
-	exit 0 
+        exit 0
     fi
 }
 
 checkPid() {
     if [ -f "$TOMCAT_HOME/pid.txt" ]; then
-      return 0
+        return 0
     else
-      exit 0
+        exit 0
     fi
 }
 
 invokeApi() {
-    wget --no-check-certificate -O applog $URL/rest/ng/config-settings/app-props 2>/tmp/script_error.log
+    curl -i $URL/rest/ng/config-settings/app-props >/dev/null 2>/tmp/script_error.log
     return $?
-
 }
 
 main() {
-    for ((COUNT=0; COUNT <= 1; COUNT++)); do
+    echo "[$CURRENT_TIME] Starting script execution" >> $LOG_FILE
+    for ((COUNT=1; COUNT <=10; COUNT++)); do
         invokeApi
-	STATUS=$?
+        STATUS=$?
         if [[ $STATUS -eq 0 ]]; then
-            echo "App is running..."
+            echo "[$CURRENT_TIME] App is running..." >> $LOG_FILE
             trap - ERR
             exit 0
         fi
@@ -84,10 +86,10 @@ main() {
     checkPid
     PID_EXISTS=$?
     if [ $PID_EXISTS -eq 0 ]; then
+        echo "[$CURRENT_TIME] Server restart triggered." >> $LOG_FILE
         restartServer
     fi
 
-    
     if [[ -n "$ALL_ERRORS" ]]; then
         # If there were errors and the server wasn't successfully restarted
         if [[ "$RESTART_SUCCESS" == false ]]; then
@@ -95,7 +97,8 @@ main() {
         fi
     fi
 
-    exit 0;
+    echo "[$CURRENT_TIME] Script execution completed." >> $LOG_FILE
+    exit 0
 }
 
 main;
